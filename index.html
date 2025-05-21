@@ -1,40 +1,33 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf WebAR</title>
+  <title>WordWolf WebAR（任意人数対応）</title>
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; font-family: sans-serif; }
     #ui {
       position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.6); color: white; padding: 15px; border-radius: 10px;
       display: flex; flex-direction: column; align-items: center;
     }
     input, button {
-      margin-top: 10px;
-      padding: 8px 12px;
-      font-size: 1em;
-    }
-    #wordDisplay {
-      margin-top: 10px;
-      min-height: 1.2em;
+      margin-top: 8px; padding: 8px; font-size: 1em;
     }
   </style>
 </head>
 <body>
   <div id="ui">
     <div id="setup">
-      <label>参加人数：</label>
-      <input type="number" id="playerCount" min="2" max="20" value="4" />
+      <label>参加人数を入力してください：</label>
+      <input type="number" id="playerCount" min="2" max="20" value="4">
       <button id="startGame">スタート</button>
     </div>
-
     <div id="game" style="display:none;">
       <button id="showWord">お題を見る</button>
-      <div id="wordDisplay"></div>
-      <button id="backButton" style="display:none;">戻る</button>
+      <div id="wordDisplay" style="margin-top:10px;"></div>
     </div>
   </div>
 
@@ -49,30 +42,19 @@
   <script>
     const words = [
       ["りんご", "バナナ"],
+      ["サッカー", "野球"],
       ["猫", "犬"],
       ["学校", "会社"],
-      ["サッカー", "野球"]
+      ["コーヒー", "紅茶"]
     ];
 
-    let totalPlayers = 4;
-    let shown = 0;
+    let totalPlayers = 0;
+    let currentPlayer = 0;
     let liarIndex = 0;
     let wordSet = [];
 
-    const setupDiv = document.getElementById("setup");
-    const gameDiv = document.getElementById("game");
-    const showWordBtn = document.getElementById("showWord");
-    const wordDisplay = document.getElementById("wordDisplay");
-    const backButton = document.getElementById("backButton");
-
-    function resetUI() {
-      localStorage.removeItem("wordwolf_seen");
-      shown = 0;
-      setupDiv.style.display = "flex";
-      gameDiv.style.display = "none";
-      wordDisplay.innerText = "";
-      showWordBtn.disabled = false;
-      backButton.style.display = "none";
+    if (localStorage.getItem("wordwolf_seen") === "yes") {
+      document.getElementById("ui").innerHTML = "<div style='color: white;'>この端末ではすでにお題を見ました</div>";
     }
 
     document.getElementById("startGame").addEventListener("click", () => {
@@ -81,40 +63,23 @@
         alert("2人以上を入力してください");
         return;
       }
+
       totalPlayers = count;
+      currentPlayer = 0;
       liarIndex = Math.floor(Math.random() * totalPlayers);
       wordSet = words[Math.floor(Math.random() * words.length)];
 
-      setupDiv.style.display = "none";
-      gameDiv.style.display = "flex";
-
-      if (localStorage.getItem("wordwolf_seen") === "yes") {
-        wordDisplay.innerText = "この端末ではすでにお題を見ました";
-        showWordBtn.style.display = "none";
-        backButton.style.display = "block";
-      } else {
-        showWordBtn.style.display = "block";
-        backButton.style.display = "none";
-      }
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("game").style.display = "block";
     });
 
-    showWordBtn.addEventListener("click", () => {
-      if (shown >= totalPlayers) {
-        wordDisplay.innerText = "全員分表示済みです";
-        return;
-      }
+    document.getElementById("showWord").addEventListener("click", () => {
+      if (localStorage.getItem("wordwolf_seen") === "yes") return;
 
-      const isLiar = (shown === liarIndex);
-      const word = isLiar ? wordSet[1] : wordSet[0];
-
-      wordDisplay.innerText = `あなたのお題：${word}`;
+      const word = (currentPlayer === liarIndex) ? wordSet[1] : wordSet[0];
+      document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
       localStorage.setItem("wordwolf_seen", "yes");
-      showWordBtn.disabled = true;
-      shown++;
-    });
-
-    backButton.addEventListener("click", () => {
-      resetUI();
+      document.getElementById("showWord").disabled = true;
     });
   </script>
 </body>
