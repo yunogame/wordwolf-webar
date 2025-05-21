@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf WebAR（任意人数対応）</title>
+  <title>WordWolf WebAR（ARお題表示）</title>
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
   <style>
@@ -21,7 +20,7 @@
 <body>
   <div id="ui">
     <div id="setup">
-      <label>参加人数を入力してください：</label>
+      <label>参加人数：</label>
       <input type="number" id="playerCount" min="2" max="20" value="4">
       <button id="startGame">スタート</button>
     </div>
@@ -33,25 +32,22 @@
 
   <a-scene mindar-face embedded color-space="sRGB" vr-mode-ui="enabled: false"
            device-orientation-permission-ui="enabled: true">
-    <a-entity mindar-face-target="anchorIndex: 0">
-      <a-box color="red" depth="0.1" height="0.1" width="0.1" position="0 0 0"></a-box>
+    <a-assets>
+      <a-asset-item id="appleModel" src="Apple.glb"></a-asset-item>
+    </a-assets>
+    <a-entity mindar-face-target="anchorIndex: 1">
+      <a-gltf-model id="appleEntity" src="#appleModel" position="0 0.2 0" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
     </a-entity>
     <a-camera active="true" position="0 0 0"></a-camera>
   </a-scene>
 
   <script>
-    const words = [
-      ["りんご", "バナナ"],
-      ["サッカー", "野球"],
-      ["猫", "犬"],
-      ["学校", "会社"],
-      ["コーヒー", "紅茶"]
-    ];
-
+    const words = [["りんご", "バナナ"]];
     let totalPlayers = 0;
-    let currentPlayer = 0;
     let liarIndex = 0;
     let wordSet = [];
+
+    const appleEntity = document.getElementById("appleEntity");
 
     if (localStorage.getItem("wordwolf_seen") === "yes") {
       document.getElementById("ui").innerHTML = "<div style='color: white;'>この端末ではすでにお題を見ました</div>";
@@ -65,7 +61,6 @@
       }
 
       totalPlayers = count;
-      currentPlayer = 0;
       liarIndex = Math.floor(Math.random() * totalPlayers);
       wordSet = words[Math.floor(Math.random() * words.length)];
 
@@ -76,11 +71,7 @@
     document.getElementById("showWord").addEventListener("click", () => {
       if (localStorage.getItem("wordwolf_seen") === "yes") return;
 
-      const word = (currentPlayer === liarIndex) ? wordSet[1] : wordSet[0];
-      document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
-      localStorage.setItem("wordwolf_seen", "yes");
-      document.getElementById("showWord").disabled = true;
-    });
-  </script>
-</body>
-</html>
+      // ここで「自分は何人目か」判定は難しいので簡易版（押した人がウルフかどうかは別途工夫が必要）
+      // とりあえず乱数でウルフ判定は残す
+      const index = Math.floor(Math.random() * totalPlayers);
+      const word = (index === liarIndex) ? wordSet
