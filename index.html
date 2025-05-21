@@ -74,4 +74,16 @@
       // ここで「自分は何人目か」判定は難しいので簡易版（押した人がウルフかどうかは別途工夫が必要）
       // とりあえず乱数でウルフ判定は残す
       const index = Math.floor(Math.random() * totalPlayers);
-      const word = (index === liarIndex) ? wordSet
+      const word = (index === liarIndex) ? wordSet[1] : wordSet[0];
+
+      document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
+      localStorage.setItem("wordwolf_seen", "yes");
+      document.getElementById("showWord").disabled = true;
+
+      if (word === "りんご") {
+        appleEntity.setAttribute("visible", "true");
+      }
+    });
+  </script>
+</body>
+</html>
