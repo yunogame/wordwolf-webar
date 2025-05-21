@@ -54,6 +54,11 @@
     let wordSet = [];
 
     const appleEntity = document.getElementById("appleEntity");
+    window.addEventListener("DOMContentLoaded", () => {
+  const appleEntity = document.getElementById("appleEntity");
+  appleEntity.setAttribute("visible", "true");
+});
+
 
     if (localStorage.getItem("wordwolf_seen") === "yes") {
       document.getElementById("ui").innerHTML = "<div style='color: white;'>この端末ではすでにお題を見ました</div>";
