@@ -34,6 +34,7 @@
     <div id="game" style="display:none;">
       <button id="showWord">お題を見る</button>
       <div id="wordDisplay"></div>
+      <button id="backButton" style="display:none;">戻る</button>
     </div>
   </div>
 
@@ -62,6 +63,17 @@
     const gameDiv = document.getElementById("game");
     const showWordBtn = document.getElementById("showWord");
     const wordDisplay = document.getElementById("wordDisplay");
+    const backButton = document.getElementById("backButton");
+
+    function resetUI() {
+      localStorage.removeItem("wordwolf_seen");
+      shown = 0;
+      setupDiv.style.display = "flex";
+      gameDiv.style.display = "none";
+      wordDisplay.innerText = "";
+      showWordBtn.disabled = false;
+      backButton.style.display = "none";
+    }
 
     document.getElementById("startGame").addEventListener("click", () => {
       const count = parseInt(document.getElementById("playerCount").value);
@@ -76,26 +88,33 @@
       setupDiv.style.display = "none";
       gameDiv.style.display = "flex";
 
-      // すでに見てたら表示しておく
-      const seenWord = localStorage.getItem("wordwolf_word");
-      if (seenWord) {
-        wordDisplay.innerText = `あなたのお題：${seenWord}`;
-        showWordBtn.disabled = true;
+      if (localStorage.getItem("wordwolf_seen") === "yes") {
+        wordDisplay.innerText = "この端末ではすでにお題を見ました";
+        showWordBtn.style.display = "none";
+        backButton.style.display = "block";
+      } else {
+        showWordBtn.style.display = "block";
+        backButton.style.display = "none";
       }
     });
 
     showWordBtn.addEventListener("click", () => {
-      if (localStorage.getItem("wordwolf_word")) {
-        return; // 二重処理防止
+      if (shown >= totalPlayers) {
+        wordDisplay.innerText = "全員分表示済みです";
+        return;
       }
 
       const isLiar = (shown === liarIndex);
       const word = isLiar ? wordSet[1] : wordSet[0];
 
       wordDisplay.innerText = `あなたのお題：${word}`;
-      localStorage.setItem("wordwolf_word", word);
+      localStorage.setItem("wordwolf_seen", "yes");
       showWordBtn.disabled = true;
       shown++;
+    });
+
+    backButton.addEventListener("click", () => {
+      resetUI();
     });
   </script>
 </body>
