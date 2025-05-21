@@ -105,6 +105,21 @@
   // プレイヤー数初期化（任意）
   document.getElementById("playerCount").value = 4;
 });
+      if (localStorage.getItem("wordwolf_seen") === "yes") {
+  document.getElementById("ui").innerHTML = `
+    <div style='color: white; text-align: center;'>
+      この端末ではすでにお題を見ました<br>
+      <button id="resetGame" style="margin-top:10px; padding:8px 16px; font-size:1em;">ゲーム終了</button>
+    </div>
+  `;
+
+  // 終了ボタンにイベントを追加
+  document.getElementById("resetGame").addEventListener("click", () => {
+    localStorage.removeItem("wordwolf_seen");
+    location.reload();  // ページをリロードして初期画面に戻す
+  });
+}
+
 
       if (word === "りんご") {
         appleEntity.setAttribute("visible", "true");
