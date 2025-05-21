@@ -34,7 +34,6 @@
     <div id="game" style="display:none;">
       <button id="showWord">お題を見る</button>
       <div id="wordDisplay"></div>
-      <button id="backButton" style="display:none;">戻る</button>
     </div>
   </div>
 
@@ -63,16 +62,13 @@
     const gameDiv = document.getElementById("game");
     const showWordBtn = document.getElementById("showWord");
     const wordDisplay = document.getElementById("wordDisplay");
-    const backButton = document.getElementById("backButton");
 
     function resetUI() {
-      localStorage.removeItem("wordwolf_seen");
       shown = 0;
       setupDiv.style.display = "flex";
       gameDiv.style.display = "none";
       wordDisplay.innerText = "";
       showWordBtn.disabled = false;
-      backButton.style.display = "none";
     }
 
     document.getElementById("startGame").addEventListener("click", () => {
@@ -85,36 +81,29 @@
       liarIndex = Math.floor(Math.random() * totalPlayers);
       wordSet = words[Math.floor(Math.random() * words.length)];
 
+      // お題を保存
+      const isLiar = (shown === liarIndex);
+      const word = isLiar ? wordSet[1] : wordSet[0];
+      localStorage.setItem("wordwolf_word", word);
+      localStorage.setItem("wordwolf_seen", "yes");
+
       setupDiv.style.display = "none";
       gameDiv.style.display = "flex";
 
       if (localStorage.getItem("wordwolf_seen") === "yes") {
-        wordDisplay.innerText = "この端末ではすでにお題を見ました";
-        showWordBtn.style.display = "none";
-        backButton.style.display = "block";
-      } else {
-        showWordBtn.style.display = "block";
-        backButton.style.display = "none";
+        const savedWord = localStorage.getItem("wordwolf_word");
+        wordDisplay.innerText = `あなたのお題：${savedWord}`;
+        showWordBtn.innerText = "お題を再表示する";
       }
     });
 
     showWordBtn.addEventListener("click", () => {
-      if (shown >= totalPlayers) {
-        wordDisplay.innerText = "全員分表示済みです";
-        return;
+      const savedWord = localStorage.getItem("wordwolf_word");
+      if (savedWord) {
+        wordDisplay.innerText = `あなたのお題：${savedWord}`;
+      } else {
+        wordDisplay.innerText = "お題が見つかりませんでした。";
       }
-
-      const isLiar = (shown === liarIndex);
-      const word = isLiar ? wordSet[1] : wordSet[0];
-
-      wordDisplay.innerText = `あなたのお題：${word}`;
-      localStorage.setItem("wordwolf_seen", "yes");
-      showWordBtn.disabled = true;
-      shown++;
-    });
-
-    backButton.addEventListener("click", () => {
-      resetUI();
     });
   </script>
 </body>
