@@ -1,135 +1,67 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <title>WordWolf WebAR（ARお題表示）</title>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
-    #ui {
-      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.6); color: white; padding: 15px; border-radius: 10px;
-      display: flex; flex-direction: column; align-items: center;
-    }
-    input, button {
-      margin-top: 8px; padding: 8px; font-size: 1em;
-    }
-  </style>
-</head>
-<body>
-  <div id="ui">
-    <div id="setup">
-      <label>参加人数：</label>
-      <input type="number" id="playerCount" min="2" max="20" value="4">
-      <button id="startGame">スタート</button>
-    </div>
-    <div id="game" style="display:none;">
-  <button id="showWord">お題を見る</button>
-  <button id="endGame" style="margin-top:10px;">ゲーム終了</button>  <!-- ここ追加 -->
-  <div id="wordDisplay" style="margin-top:10px;"></div>
-</div>
-
-    <div id="game" style="display:none;">
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>WordWolf WebAR</title>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #buttonContainer {
+        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="buttonContainer">
       <button id="showWord">お題を見る</button>
       <div id="wordDisplay" style="margin-top:10px;"></div>
     </div>
-  </div>
 
-  <a-scene mindar-face embedded color-space="sRGB" vr-mode-ui="enabled: false"
-           device-orientation-permission-ui="enabled: true">
-    <a-assets>
-      <a-asset-item id="appleModel" src="Apple.glb"></a-asset-item>
-    </a-assets>
-    <a-entity mindar-face-target="anchorIndex: 1">
-      <a-gltf-model id="appleEntity" src="#appleModel" position="0 0.2 0" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
-    </a-entity>
-    <a-camera active="true" position="0 0 0"></a-camera>
-  </a-scene>
+    <a-scene mindar-face embedded color-space="sRGB" vr-mode-ui="enabled: false"
+             device-orientation-permission-ui="enabled: true">
+      <a-entity mindar-face-target="anchorIndex: 0">
+        <a-box color="red" depth="0.1" height="0.1" width="0.1" position="0 0 0"></a-box>
+      </a-entity>
+      <a-camera active="true" position="0 0 0"></a-camera>
+    </a-scene>
 
-  <script>
-    const words = [["りんご", "バナナ"]];
-    let totalPlayers = 0;
-    let liarIndex = 0;
-    let wordSet = [];
+   <script>
+  const words = [
+    ["りんご", "バナナ"],
+    ["サッカー", "野球"],
+    ["猫", "犬"],
+    ["学校", "会社"],
+    ["コーヒー", "紅茶"]
+  ];
+  const wordSet = words[Math.floor(Math.random() * words.length)];
+  const liarIndex = Math.floor(Math.random() * 4);
+  let shown = 0;
 
-    const appleEntity = document.getElementById("appleEntity");
-    window.addEventListener("DOMContentLoaded", () => {
-  const appleEntity = document.getElementById("appleEntity");
-  appleEntity.setAttribute("visible", "true");
-});
+  // ローカルストレージをチェック
+  if (localStorage.getItem("wordwolf_seen") === "yes") {
+    document.getElementById("showWord").disabled = true;
+    document.getElementById("wordDisplay").innerText = "この端末ではすでにお題を見ました";
+  }
 
+  document.getElementById("showWord").addEventListener("click", () => {
+    if (localStorage.getItem("wordwolf_seen") === "yes") return;
 
-    if (localStorage.getItem("wordwolf_seen") === "yes") {
-      document.getElementById("ui").innerHTML = "<div style='color: white;'>この端末ではすでにお題を見ました</div>";
+    if (shown >= 4) {
+      document.getElementById("wordDisplay").innerText = "全員分表示済みです";
+      return;
     }
 
-    document.getElementById("startGame").addEventListener("click", () => {
-      const count = parseInt(document.getElementById("playerCount").value);
-      if (isNaN(count) || count < 2) {
-        alert("2人以上を入力してください");
-        return;
-      }
+    const word = (shown === liarIndex) ? wordSet[1] : wordSet[0];
+    document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
+    shown++;
 
-      totalPlayers = count;
-      liarIndex = Math.floor(Math.random() * totalPlayers);
-      wordSet = words[Math.floor(Math.random() * words.length)];
-
-      document.getElementById("setup").style.display = "none";
-      document.getElementById("game").style.display = "block";
-    });
-
-    document.getElementById("showWord").addEventListener("click", () => {
-      if (localStorage.getItem("wordwolf_seen") === "yes") return;
-
-      // ここで「自分は何人目か」判定は難しいので簡易版（押した人がウルフかどうかは別途工夫が必要）
-      // とりあえず乱数でウルフ判定は残す
-      const index = Math.floor(Math.random() * totalPlayers);
-      const word = (index === liarIndex) ? wordSet[1] : wordSet[0];
-
-      document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
-      localStorage.setItem("wordwolf_seen", "yes");
-      document.getElementById("showWord").disabled = true;
-      document.getElementById("endGame").addEventListener("click", () => {
-  // ゲーム画面を隠してセットアップ画面を表示
-  document.getElementById("game").style.display = "none";
-  document.getElementById("setup").style.display = "block";
-
-  // お題表示のリセット
-  document.getElementById("wordDisplay").innerText = "";
-
-  // localStorageの制限解除（必要に応じて）
-  localStorage.removeItem("wordwolf_seen");
-
-  // ボタンの有効化（制限解除してる場合）
-  document.getElementById("showWord").disabled = false;
-
-  // ARモデル非表示
-  appleEntity.setAttribute("visible", "false");
-
-  // プレイヤー数初期化（任意）
-  document.getElementById("playerCount").value = 4;
-});
-      if (localStorage.getItem("wordwolf_seen") === "yes") {
-  document.getElementById("ui").innerHTML = `
-    <div style='color: white; text-align: center;'>
-      この端末ではすでにお題を見ました<br>
-      <button id="resetGame" style="margin-top:10px; padding:8px 16px; font-size:1em;">ゲーム終了</button>
-    </div>
-  `;
-
-  // 終了ボタンにイベントを追加
-  document.getElementById("resetGame").addEventListener("click", () => {
-    localStorage.removeItem("wordwolf_seen");
-    location.reload();  // ページをリロードして初期画面に戻す
+    // 見たことを記録し、ボタンを無効化
+    localStorage.setItem("wordwolf_seen", "yes");
+    document.getElementById("showWord").disabled = true;
   });
-}
+</script>
 
-
-      if (word === "りんご") {
-        appleEntity.setAttribute("visible", "true");
-      }
-    });
-  </script>
-</body>
+  </body>
 </html>
