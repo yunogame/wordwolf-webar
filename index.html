@@ -63,14 +63,6 @@
     const showWordBtn = document.getElementById("showWord");
     const wordDisplay = document.getElementById("wordDisplay");
 
-    function resetUI() {
-      shown = 0;
-      setupDiv.style.display = "flex";
-      gameDiv.style.display = "none";
-      wordDisplay.innerText = "";
-      showWordBtn.disabled = false;
-    }
-
     document.getElementById("startGame").addEventListener("click", () => {
       const count = parseInt(document.getElementById("playerCount").value);
       if (isNaN(count) || count < 2) {
@@ -81,29 +73,29 @@
       liarIndex = Math.floor(Math.random() * totalPlayers);
       wordSet = words[Math.floor(Math.random() * words.length)];
 
-      // お題を保存
-      const isLiar = (shown === liarIndex);
-      const word = isLiar ? wordSet[1] : wordSet[0];
-      localStorage.setItem("wordwolf_word", word);
-      localStorage.setItem("wordwolf_seen", "yes");
-
       setupDiv.style.display = "none";
       gameDiv.style.display = "flex";
 
-      if (localStorage.getItem("wordwolf_seen") === "yes") {
-        const savedWord = localStorage.getItem("wordwolf_word");
-        wordDisplay.innerText = `あなたのお題：${savedWord}`;
-        showWordBtn.innerText = "お題を再表示する";
+      // すでに見てたら表示しておく
+      const seenWord = localStorage.getItem("wordwolf_word");
+      if (seenWord) {
+        wordDisplay.innerText = `あなたのお題：${seenWord}`;
+        showWordBtn.disabled = true;
       }
     });
 
     showWordBtn.addEventListener("click", () => {
-      const savedWord = localStorage.getItem("wordwolf_word");
-      if (savedWord) {
-        wordDisplay.innerText = `あなたのお題：${savedWord}`;
-      } else {
-        wordDisplay.innerText = "お題が見つかりませんでした。";
+      if (localStorage.getItem("wordwolf_word")) {
+        return; // 二重処理防止
       }
+
+      const isLiar = (shown === liarIndex);
+      const word = isLiar ? wordSet[1] : wordSet[0];
+
+      wordDisplay.innerText = `あなたのお題：${word}`;
+      localStorage.setItem("wordwolf_word", word);
+      showWordBtn.disabled = true;
+      shown++;
     });
   </script>
 </body>
