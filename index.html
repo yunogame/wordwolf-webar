@@ -25,6 +25,12 @@
       <button id="startGame">スタート</button>
     </div>
     <div id="game" style="display:none;">
+  <button id="showWord">お題を見る</button>
+  <button id="endGame" style="margin-top:10px;">ゲーム終了</button>  <!-- ここ追加 -->
+  <div id="wordDisplay" style="margin-top:10px;"></div>
+</div>
+
+    <div id="game" style="display:none;">
       <button id="showWord">お題を見る</button>
       <div id="wordDisplay" style="margin-top:10px;"></div>
     </div>
@@ -79,6 +85,26 @@
       document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
       localStorage.setItem("wordwolf_seen", "yes");
       document.getElementById("showWord").disabled = true;
+      document.getElementById("endGame").addEventListener("click", () => {
+  // ゲーム画面を隠してセットアップ画面を表示
+  document.getElementById("game").style.display = "none";
+  document.getElementById("setup").style.display = "block";
+
+  // お題表示のリセット
+  document.getElementById("wordDisplay").innerText = "";
+
+  // localStorageの制限解除（必要に応じて）
+  localStorage.removeItem("wordwolf_seen");
+
+  // ボタンの有効化（制限解除してる場合）
+  document.getElementById("showWord").disabled = false;
+
+  // ARモデル非表示
+  appleEntity.setAttribute("visible", "false");
+
+  // プレイヤー数初期化（任意）
+  document.getElementById("playerCount").value = 4;
+});
 
       if (word === "りんご") {
         appleEntity.setAttribute("visible", "true");
