@@ -28,26 +28,40 @@
     </a-scene>
 
     <script>
-      const words = [
-        ["りんご", "バナナ"],
-        ["サッカー", "野球"],
-        ["猫", "犬"],
-        ["学校", "会社"],
-        ["コーヒー", "紅茶"]
-      ];
-      const wordSet = words[Math.floor(Math.random() * words.length)];
-      const liarIndex = Math.floor(Math.random() * 4);
-      let shown = 0;
+  const words = [
+    ["りんご", "バナナ"],
+    ["サッカー", "野球"],
+    ["猫", "犬"],
+    ["学校", "会社"],
+    ["コーヒー", "紅茶"]
+  ];
+  const wordSet = words[Math.floor(Math.random() * words.length)];
+  const liarIndex = Math.floor(Math.random() * 4);
+  let shown = 0;
 
-      document.getElementById("showWord").addEventListener("click", () => {
-        if (shown >= 4) {
-          document.getElementById("wordDisplay").innerText = "全員分表示済みです";
-          return;
-        }
-        const word = (shown === liarIndex) ? wordSet[1] : wordSet[0];
-        document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
-        shown++;
-      });
-    </script>
+  // ローカルストレージをチェック
+  if (localStorage.getItem("wordwolf_seen") === "yes") {
+    document.getElementById("showWord").disabled = true;
+    document.getElementById("wordDisplay").innerText = "この端末ではすでにお題を見ました";
+  }
+
+  document.getElementById("showWord").addEventListener("click", () => {
+    if (localStorage.getItem("wordwolf_seen") === "yes") return;
+
+    if (shown >= 4) {
+      document.getElementById("wordDisplay").innerText = "全員分表示済みです";
+      return;
+    }
+
+    const word = (shown === liarIndex) ? wordSet[1] : wordSet[0];
+    document.getElementById("wordDisplay").innerText = `あなたのお題：${word}`;
+    shown++;
+
+    // 見たことを記録し、ボタンを無効化
+    localStorage.setItem("wordwolf_seen", "yes");
+    document.getElementById("showWord").disabled = true;
+  });
+</script>
+
   </body>
 </html>
