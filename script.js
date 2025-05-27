@@ -116,7 +116,7 @@ function listenVotingStarted() {
   const votingStartedRef = database.ref(`games/${currentGameId}/votingStarted`);
   votingStartedRef.on("value", snapshot => {
     if (snapshot.val() === true) {
-      // 投票開始ボタンはもういらないので消す
+      
       const btn = document.getElementById("startVotingBtn");
       if (btn) btn.remove();
 
@@ -202,7 +202,7 @@ function listenVotes() {
           // 投票監視解除
           votesRef.off();
 
-          // 必要に応じてゲーム終了やリセット処理をここに実装してください
+          
         });
       }
     });
