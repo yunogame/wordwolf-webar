@@ -25,20 +25,46 @@ document.getElementById("createGame").addEventListener("click", async () => {
   });
 
   joinGame(currentGameId);
+
+  // ゲームID入力欄は非表示にしておく
+  document.getElementById("joinGameSection").style.display = "none";
+});
+
+document.getElementById("joinGameButton").addEventListener("click", () => {
+  const gameId = document.getElementById("joinGameIdInput").value.trim();
+  if (!gameId) {
+    alert("ゲームIDを入力してください");
+    return;
+  }
+
+  database.ref(`games/${gameId}`).once("value").then(snapshot => {
+    if (!snapshot.exists()) {
+      alert("指定のゲームIDは存在しません");
+      return;
+    }
+
+    joinGame(gameId);
+
+    document.getElementById("joinGameSection").style.display = "none";
+  });
 });
 
 function joinGame(gameId) {
   currentGameId = gameId;
-  const playerRef = database.ref(`games/${gameId}/players`);
-  playerRef.once("value").then(snapshot => {
-    const players = snapshot.val() || [];
-    myIndex = players.length;
-    playerRef.set([...players, true]);
-  });
+  const playersRef = database.ref(`games/${gameId}/players`);
 
-  document.getElementById("setup").style.display = "none";
-  document.getElementById("joinSection").style.display = "block";
-  document.getElementById("gameIdDisplay").textContent = gameId;
+  playersRef.transaction(players => {
+    if (players === null) players = [];
+    myIndex = players.length;
+    players.push(true);
+    return players;
+  }).then(() => {
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("joinSection").style.display = "block";
+    document.getElementById("gameIdDisplay").textContent = gameId;
+  }).catch(error => {
+    alert("参加処理でエラーが発生しました: " + error.message);
+  });
 }
 
 document.getElementById("showWord").addEventListener("click", () => {
