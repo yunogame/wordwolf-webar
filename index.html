@@ -2,178 +2,186 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf WebAR with Firebase</title>
+  <title>WordWolf WebAR Firebase対応</title>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
 
-  <!-- A-FrameやMindARの読み込みはここ -->
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <style>
-    body { margin: 0; font-family: sans-serif; }
+    body { margin: 0; font-family: sans-serif; background: #222; color: white; }
     #ui {
-      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.6); color: white; padding: 15px; border-radius: 10px;
-      display: flex; flex-direction: column; align-items: center;
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px;
+      max-width: 320px; width: 90%;
     }
-    button, input { margin-top: 10px; padding: 8px; font-size: 1em; }
+    input, button {
+      margin-top: 10px; padding: 8px;
+      font-size: 1em; width: 100%;
+      border-radius: 5px; border: none;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    #wordDisplay {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 1.2em;
+    }
   </style>
 </head>
 <body>
 
-  <div id="ui">
-    <label>参加人数：
-      <input type="number" id="playerCount" min="2" max="20" value="4">
-    </label>
-    <button id="startGame">スタート</button>
-    <button id="showWord" style="display:none;">お題を見る</button>
-    <div id="wordDisplay" style="margin-top:10px;"></div>
+<div id="ui">
+  <div id="setupDiv">
+    <label>参加人数を入力して「ゲーム作成」ボタンを押してください</label>
+    <input type="number" id="playerCountInput" min="2" max="20" value="4" />
+    <button id="createGameBtn">ゲーム作成（ホスト）</button>
   </div>
 
-  <!-- A-Frameシーンなど -->
+  <div id="joinDiv" style="display:none;">
+    <label>ゲームIDを入力して「参加」ボタンを押してください</label>
+    <input type="text" id="gameIdInput" placeholder="ゲームIDを入力" />
+    <button id="joinGameBtn">参加</button>
+  </div>
 
-  <script type="module">
-    // Firebaseモジュールの読み込み
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+  <div id="gameDiv" style="display:none;">
+    <div>ゲームID: <span id="gameIdDisplay"></span></div>
+    <div>あなたの参加番号: <span id="playerIndexDisplay"></span></div>
+    <button id="showWordBtn">お題を見る</button>
+    <div id="wordDisplay"></div>
+    <button id="endGameBtn" style="margin-top:15px; background:#c33; color:#fff;">ゲーム終了</button>
+  </div>
 
-    // Firebase設定
-    const firebaseConfig = {
-      apiKey: "AIzaSyBAJQBcqvVUEfmdIaWutofWY2MbfuNoX2c",
-      authDomain: "wordwolf-webar.firebaseapp.com",
-      databaseURL: "https://wordwolf-webar-default-rtdb.firebaseio.com",
-      projectId: "wordwolf-webar",
-      storageBucket: "wordwolf-webar.firebasestorage.app",
-      messagingSenderId: "422294380099",
-      appId: "1:422294380099:web:5df64a14defed9ae487ef6",
-      measurementId: "G-XZ7FETM5XF"
-    };
+  <div id="message" style="margin-top:15px; color:#faa;"></div>
+</div>
 
-    // Firebase初期化
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+<!-- AR scene placeholder -->
+<a-scene mindar-face embedded color-space="sRGB" vr-mode-ui="enabled: false"
+         device-orientation-permission-ui="enabled: true" style="width:100vw; height:100vh;">
+  <a-assets>
+    <a-asset-item id="appleModel" src="Apple.glb"></a-asset-item>
+    <a-asset-item id="bananaModel" src="Banana.glb"></a-asset-item>
+  </a-assets>
 
-    // ゲームの基本情報
-    const words = [
-      ["りんご", "バナナ"],
-      ["サッカー", "野球"],
-      ["猫", "犬"],
-      ["学校", "会社"],
-      ["コーヒー", "紅茶"]
-    ];
+  <a-entity mindar-face-target="anchorIndex: 0">
+    <a-gltf-model id="appleEntity" src="#appleModel" position="0 0.2 0" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+    <a-gltf-model id="bananaEntity" src="#bananaModel" position="0 0.2 0" scale="0.3 0.3 0.3" visible="false"></a-gltf-model>
+  </a-entity>
 
-    const startBtn = document.getElementById("startGame");
-    const showWordBtn = document.getElementById("showWord");
-    const wordDisplay = document.getElementById("wordDisplay");
-    const playerCountInput = document.getElementById("playerCount");
+  <a-camera active="true" position="0 0 0"></a-camera>
+</a-scene>
 
-    let gameId = null;      // ゲームセッションID
-    let playerIndex = null; // 参加者番号（0〜playerCount-1）
+<script>
+  // Firebase設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyBAJQBcqvVUEfmdIaWutofWY2MbfuNoX2c",
+    authDomain: "wordwolf-webar.firebaseapp.com",
+    databaseURL: "https://wordwolf-webar-default-rtdb.firebaseio.com",
+    projectId: "wordwolf-webar",
+    storageBucket: "wordwolf-webar.appspot.com",
+    messagingSenderId: "422294380099",
+    appId: "1:422294380099:web:5df64a14defed9ae487ef6",
+    measurementId: "G-XZ7FETM5XF"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-    // ホストがゲームを作る（スタートボタン）
-    startBtn.addEventListener("click", async () => {
-      const count = parseInt(playerCountInput.value);
-      if (isNaN(count) || count < 2) {
-        alert("2人以上を入力してください");
-        return;
-      }
+  // 単語リスト（ウルフは wordSet[1]）
+  const wordSets = [
+    ["りんご", "バナナ"],
+    ["サッカー", "野球"],
+    ["猫", "犬"],
+    ["学校", "会社"],
+    ["コーヒー", "紅茶"]
+  ];
 
-      // ゲームIDはランダムに生成（例: timestamp）
-      gameId = "game_" + Date.now();
+  // UI要素
+  const setupDiv = document.getElementById("setupDiv");
+  const joinDiv = document.getElementById("joinDiv");
+  const gameDiv = document.getElementById("gameDiv");
+  const playerCountInput = document.getElementById("playerCountInput");
+  const createGameBtn = document.getElementById("createGameBtn");
+  const gameIdInput = document.getElementById("gameIdInput");
+  const joinGameBtn = document.getElementById("joinGameBtn");
+  const gameIdDisplay = document.getElementById("gameIdDisplay");
+  const playerIndexDisplay = document.getElementById("playerIndexDisplay");
+  const showWordBtn = document.getElementById("showWordBtn");
+  const wordDisplay = document.getElementById("wordDisplay");
+  const endGameBtn = document.getElementById("endGameBtn");
+  const message = document.getElementById("message");
 
-      // お題セットをランダムに選択
-      const wordSet = words[Math.floor(Math.random() * words.length)];
-      const liarIndex = Math.floor(Math.random() * count);
+  // ARモデル要素
+  const appleEntity = document.getElementById("appleEntity");
+  const bananaEntity = document.getElementById("bananaEntity");
 
-      // Firebaseにゲームデータを書き込み
-      await set(ref(database, 'games/' + gameId), {
-        playerCount: count,
-        liarIndex: liarIndex,
-        wordSet: wordSet,
-        players: {}
-      });
+  // ゲーム状態変数
+  let gameId = null;
+  let playerIndex = null;
+  let playerCount = 0;
+  let wordSet = null;
+  let liarIndex = null;
 
-      playerIndex = 0; // ホストは1人目
+  // 乱数でgameIdを作る簡易版（本番はUUID推奨）
+  function generateGameId() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
 
-      startBtn.style.display = "none";
-      playerCountInput.style.display = "none";
-      showWordBtn.style.display = "inline-block";
-      wordDisplay.textContent = "ゲームを作成しました。お題を見るボタンを押してください。";
+  // ゲーム作成（ホスト）
+  createGameBtn.addEventListener("click", async () => {
+    playerCount = parseInt(playerCountInput.value);
+    if (isNaN(playerCount) || playerCount < 2 || playerCount > 20) {
+      alert("参加人数は2～20の間で入力してください");
+      return;
+    }
+    gameId = generateGameId();
+    liarIndex = Math.floor(Math.random() * playerCount);
+    wordSet = wordSets[Math.floor(Math.random() * wordSets.length)];
 
-      // ここでQRコード表示などを追加するとよいです
-      console.log("ゲームID:", gameId);
+    // Firebaseにゲーム情報をセット
+    await database.ref(`games/${gameId}`).set({
+      playerCount: playerCount,
+      liarIndex: liarIndex,
+      wordSet: wordSet,
+      players: {}
     });
 
-    // 参加者がQRコード等からgameIdを知っている想定で
-    // 簡単な「参加」ボタン処理例（実際はQRスキャンなどでgameIdを取得）
-    // ここは別途実装が必要です
+    setupDiv.style.display = "none";
+    joinDiv.style.display = "block";
+    gameIdInput.value = gameId;
+    message.textContent = "ゲーム作成しました。参加者はこのゲームIDを使って参加してください。";
+  });
 
-    // お題を見るボタン
-    showWordBtn.addEventListener("click", async () => {
-      if (!gameId) {
-        alert("ゲームがまだ開始されていません");
-        return;
-      }
-
-      // 自分の参加番号をFirebaseに登録（ホストは0、他は参加時に自動登録）
-      const playerRef = ref(database, `games/${gameId}/players/player${playerIndex}`);
-
-      // お題データを取得
-      const snapshot = await get(ref(database, `games/${gameId}`));
-      if (!snapshot.exists()) {
-        wordDisplay.textContent = "ゲーム情報が見つかりません";
-        return;
-      }
-
-      const gameData = snapshot.val();
-
-      // 自分の役割によってお題を決定
-      const word = (playerIndex === gameData.liarIndex) ? gameData.wordSet[1] : gameData.wordSet[0];
-
-      wordDisplay.textContent = `あなたのお題：${word}`;
-
-      // Firebaseに「見た」状態を保存しておく
-      await set(playerRef, { seen: true, word: word });
-      showWordBtn.disabled = true;
-    });
-
-    // 他端末はゲームIDを入力するかQRコードでgameIdを読み込む想定
-    // 例として簡単な参加処理を関数化（別途UI実装が必要）
-    async function joinGame(joinGameId) {
-      const snapshot = await get(ref(database, `games/${joinGameId}`));
-      if (!snapshot.exists()) {
-        alert("ゲームが見つかりません");
-        return;
-      }
-      const gameData = snapshot.val();
-
-      // 空いてる参加番号を探す
-      const players = gameData.players || {};
-      const count = gameData.playerCount;
-      for (let i = 0; i < count; i++) {
-        if (!players[`player${i}`]) {
-          playerIndex = i;
-          break;
-        }
-      }
-      if (playerIndex === null) {
-        alert("参加人数が上限に達しています");
-        return;
-      }
-
-      gameId = joinGameId;
-
-      // 登録だけはしておく（まだお題は見てない状態）
-      await set(ref(database, `games/${gameId}/players/player${playerIndex}`), { seen: false });
-
-      startBtn.style.display = "none";
-      playerCountInput.style.display = "none";
-      showWordBtn.style.display = "inline-block";
-      wordDisplay.textContent = "参加しました。お題を見るボタンを押してください。";
-      showWordBtn.disabled = false;
+  // 参加処理
+  joinGameBtn.addEventListener("click", async () => {
+    const inputId = gameIdInput.value.trim().toUpperCase();
+    if (!inputId) {
+      alert("ゲームIDを入力してください");
+      return;
     }
 
-    // 例：実際はQRスキャン等でgameIdを取得してjoinGameを呼ぶ
-    // joinGame("game_123456789");
+    const snapshot = await database.ref(`games/${inputId}`).get();
+    if (!snapshot.exists()) {
+      alert("そのゲームは存在しません");
+      return;
+    }
+    const gameData = snapshot.val();
+    playerCount = gameData.playerCount;
+    liarIndex = gameData.liarIndex;
+    wordSet = gameData.wordSet;
+    gameId = inputId;
 
-  </script>
-
-</body>
-</html>
+    // 空いている参加者番号を探す
+    const players = gameData.players || {};
+    let foundIndex = null;
+    for (let i = 0; i < playerCount; i++) {
+      if (!(players.hasOwnProperty(`player${i}`))) {
+        foundIndex = i;
+        break;
+      }
+    }
+   
