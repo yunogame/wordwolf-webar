@@ -1,19 +1,37 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>Firebase動作テスト</title>
-  <!-- Firebase compat SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8">
+  <title>WordWolf WebAR - ホスト/参加</title>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #111; color: white; }
+    #ui { padding: 20px; max-width: 500px; margin: auto; }
+    input, button { font-size: 16px; margin: 5px 0; padding: 8px; width: 100%; }
+    .section { border: 1px solid #555; padding: 15px; margin-top: 15px; border-radius: 8px; }
+  </style>
 </head>
 <body>
-  <h2>ゲーム作成テスト</h2>
-  <label>参加人数<input type="number" id="playerCount" value="4" min="2" max="20" /></label>
-  <button id="createGame">ゲーム作成</button>
-  <p id="result"></p>
+  <div id="ui">
+    <h2>WordWolf WebAR</h2>
+    <div class="section">
+      <h3>ホストとしてゲーム作成</h3>
+      <button id="createGame">ゲーム作成</button>
+      <div id="hostGameId"></div>
+    </div>
+
+    <div class="section">
+      <h3>参加者として参加</h3>
+      <input id="joinGameId" placeholder="gameIdを入力">
+      <button id="joinGame">参加</button>
+      <div id="playerInfo"></div>
+    </div>
+  </div>
 
   <script>
+    // Firebase 初期化
     const firebaseConfig = {
       apiKey: "AIzaSyBAJQBcqvVUEfmdIaWutofWY2MbfuNoX2c",
       authDomain: "wordwolf-webar.firebaseapp.com",
@@ -27,35 +45,45 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function generateGameId() {
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-      let id = "";
-      for(let i=0; i<6; i++) id += chars.charAt(Math.floor(Math.random()*chars.length));
-      return id;
-    }
-
+    // ゲーム作成（ホスト）
     document.getElementById("createGame").addEventListener("click", () => {
-      const count = parseInt(document.getElementById("playerCount").value);
-      if(isNaN(count) || count < 2){
-        alert("参加人数は2人以上で設定してください");
-        return;
-      }
-      const gameId = generateGameId();
-      const gameData = {
-        totalPlayers: count,
-        status: "waiting",
-        createdAt: Date.now()
-      };
+      const newGameRef = db.ref("games").push();
+      const gameId = newGameRef.key;
+      const wordSets = [["りんご", "バナナ"], ["犬", "猫"], ["学校", "会社"]];
+      const selectedSet = wordSets[Math.floor(Math.random() * wordSets.length)];
+      const liarIndex = Math.floor(Math.random() * 10); // 最大10人想定
 
-      db.ref("games/" + gameId).set(gameData)
-        .then(() => {
-          console.log("ゲーム作成成功: " + gameId);
-          document.getElementById("result").textContent = "ゲーム作成成功！ID: " + gameId;
-        })
-        .catch((e) => {
-          console.error("ゲーム作成失敗:", e);
-          document.getElementById("result").textContent = "ゲーム作成失敗: " + e.message;
-        });
+      newGameRef.set({
+        wordSet: selectedSet,
+        liarIndex: liarIndex,
+        players: []
+      });
+
+      document.getElementById("hostGameId").innerText = `このGame IDを共有: ${gameId}`;
+    });
+
+    // ゲーム参加（参加者）
+    document.getElementById("joinGame").addEventListener("click", () => {
+      const gameId = document.getElementById("joinGameId").value.trim();
+      if (!gameId) return alert("Game IDを入力してください");
+
+      const gameRef = db.ref(`games/${gameId}`);
+      gameRef.once("value").then(snapshot => {
+        if (!snapshot.exists()) {
+          alert("そのGame IDは存在しません");
+          return;
+        }
+
+        const players = snapshot.val().players || [];
+        const playerIndex = players.length;
+        players.push(true); // ただのマーカーとしてtrue
+
+        gameRef.update({ players });
+        localStorage.setItem("gameId", gameId);
+        localStorage.setItem("playerIndex", playerIndex);
+
+        document.getElementById("playerInfo").innerText = `ゲームに参加しました（あなたは ${playerIndex + 1} 人目）`;
+      });
     });
   </script>
 </body>
