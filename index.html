@@ -9,7 +9,8 @@
   <script src="script.js" defer></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #joinSection { display: none; }
+    #joinSection, #votingSection { display: none; }
+    button { margin: 5px; }
   </style>
 </head>
 <body>
@@ -29,6 +30,13 @@
     <p>ゲームID: <span id="gameIdDisplay"></span></p>
     <button id="showWord">お題を見る</button>
     <p id="wordDisplay"></p>
+  </div>
+
+  <div id="votingSection">
+    <h2>投票タイム！</h2>
+    <p>誰に投票しますか？</p>
+    <div id="voteButtons"></div>
+    <p id="voteResult"></p>
   </div>
 </body>
 </html>
