@@ -6,7 +6,7 @@
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase互換版SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -22,7 +22,7 @@
       max-width: 360px;
       width: 90%;
       color: white;
-      z-index: 10; /* UIを前面に */
+      z-index: 10;
       user-select: none;
     }
     input, button {
@@ -123,7 +123,16 @@
     // プレイヤーが表示済みかの判定用ローカルストレージキー
     const SEEN_KEY = "wordwolf_seen";
 
-    // ゲーム作成
+    // ユーティリティ: 6桁の英数字ゲームID生成
+    function generateGameId() {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let id = "";
+      for(let i=0; i<6; i++) {
+        id += chars.charAt(Math.floor(Math.random()*chars.length));
+      }
+      return id;
+    }
+
     createGameBtn.addEventListener("click", () => {
       const count = parseInt(playerCountInput.value);
       if(isNaN(count) || count < 2) {
@@ -131,14 +140,13 @@
         return;
       }
       totalPlayers = count;
-      playerId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      playerId = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
       gameId = generateGameId();
 
-      // ランダムでワード選択とウルフ位置決定
       wordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
       liarIndex = Math.floor(Math.random() * totalPlayers);
 
-      // Firebaseにゲーム情報を作成
+      // Firebaseにゲーム作成
       db.ref(`games/${gameId}`).set({
         totalPlayers: totalPlayers,
         liarIndex: liarIndex,
@@ -147,53 +155,53 @@
         status: "waiting"
       }).then(() => {
         joinGameInternal();
+      }).catch((e) => {
+        alert("ゲーム作成に失敗しました: "+e.message);
       });
     });
 
-    // ゲーム参加
     joinGameBtn.addEventListener("click", () => {
-      const joinId = joinGameIdInput.value.trim();
+      const joinId = joinGameIdInput.value.trim().toUpperCase();
       if(!joinId) {
         alert("ゲームIDを入力してください");
         return;
       }
       gameId = joinId;
-      playerId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      playerId = Date.now().toString(36) + Math.random().toString(36).slice(2,10);
       joinGameInternal();
     });
 
-    // 内部参加処理
     function joinGameInternal() {
       if(!gameId) return;
-      // プレイヤー登録
+
       const playerRef = db.ref(`games/${gameId}/players/${playerId}`);
+
       playerRef.set({ seen: false, voted: false })
         .then(() => {
           setupDiv.style.display = "none";
           gameDiv.style.display = "block";
-          gameIdDisplay.innerText = gameId;
+          gameIdDisplay.textContent = gameId;
           showWordBtn.disabled = false;
           voteButton.style.display = "none";
           endGameButton.style.display = "none";
-          wordDisplay.innerText = "";
-          statusMessage.innerText = "";
+          wordDisplay.textContent = "";
+          statusMessage.textContent = "";
+          localStorage.removeItem(SEEN_KEY);
 
-          // 監視開始
           setupRealtimeListeners();
         })
         .catch(() => {
-          alert("ゲーム参加に失敗しました。ゲームIDを確認してください。");
+          alert("ゲームに参加できませんでした。IDを確認してください。");
         });
     }
 
-    // ゲーム情報のリアルタイム監視
     function setupRealtimeListeners() {
       const gameRef = db.ref(`games/${gameId}`);
 
-      gameRef.on("value", (snapshot) => {
+      gameRef.on("value", snapshot => {
         const data = snapshot.val();
         if(!data) {
-          alert("ゲームが終了または存在しません。");
+          alert("ゲームは終了しました。ページを再読み込みしてください。");
           location.reload();
           return;
         }
@@ -203,15 +211,42 @@
         const players = data.players || {};
         const status = data.status || "waiting";
 
-        // プレイヤー数チェック
-        const playerCountNow = Object.keys(players).length;
-        if(status === "waiting" && playerCountNow >= totalPlayers) {
-          // 全員参加完了。ゲーム開始へ
-          gameRef.update({ status: "started" });
-        }
+        // プレイヤー数取得
+        const joinedCount = Object.keys(players).length;
 
-        if(status === "started") {
-          statusMessage.innerText = `ゲーム中... 参加者 ${playerCountNow}/${totalPlayers}`;
+        if(status === "waiting") {
+          statusMessage.textContent = `参加者: ${joinedCount} / ${totalPlayers} 人`;
+          if(joinedCount >= totalPlayers) {
+            // 全員参加したらゲーム開始に切り替え
+            gameRef.update({ status: "started" });
+          }
+        } else if(status === "started") {
+          statusMessage.textContent = `ゲーム中 参加者: ${joinedCount} 人`;
           voteButton.style.display = "inline-block";
           endGameButton.style.display = "inline-block";
+        } else if(status === "ended") {
+          statusMessage.textContent = "ゲームは終了しました";
+          voteButton.style.display = "none";
+          endGameButton.style.display = "none";
+          showWordBtn.disabled = true;
         }
+      });
+    }
+
+    showWordBtn.addEventListener("click", () => {
+      if(localStorage.getItem(SEEN_KEY) === "yes") {
+        alert("この端末はすでにお題を見ています");
+        return;
+      }
+
+      const playerIndex = getPlayerIndex();
+
+      if(playerIndex === -1) {
+        alert("プレイヤー情報が見つかりません。");
+        return;
+      }
+
+      const yourWord = (playerIndex === liarIndex) ? wordSet[1] : wordSet[0];
+      wordDisplay.textContent = `あなたのお題：${yourWord}`;
+
+      //
