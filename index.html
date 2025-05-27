@@ -2,83 +2,18 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf WebAR</title>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-face-aframe.prod.js"></script>
-
-  <!-- Firebase互換版SDK -->
+  <title>Firebase動作テスト</title>
+  <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-  <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
-    #ui {
-      position: absolute;
-      top: 10px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 360px;
-      width: 90%;
-      color: white;
-      z-index: 10;
-      user-select: none;
-    }
-    input, button {
-      margin-top: 8px;
-      padding: 10px;
-      font-size: 1em;
-      width: 100%;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-    #wordDisplay {
-      margin-top: 15px;
-      font-size: 1.3em;
-      min-height: 2em;
-      text-align: center;
-    }
-  </style>
 </head>
 <body>
-  <div id="ui">
-    <div id="setup">
-      <label>参加人数：</label>
-      <input type="number" id="playerCount" min="2" max="20" value="4" />
-      <button id="createGame">ゲーム作成</button>
-      <hr style="margin:10px 0;">
-      <label>ゲームID入力して参加</label>
-      <input type="text" id="joinGameId" placeholder="ゲームID" />
-      <button id="joinGame">参加</button>
-    </div>
-
-    <div id="game" style="display:none;">
-      <div>ゲームID: <span id="gameIdDisplay"></span></div>
-      <button id="showWord">お題を見る</button>
-      <div id="wordDisplay"></div>
-      <button id="voteButton" style="margin-top:15px; display:none;">投票する</button>
-      <button id="endGameButton" style="margin-top:15px; display:none;">ゲーム終了</button>
-      <div id="statusMessage" style="margin-top:10px;"></div>
-    </div>
-  </div>
-
-  <a-scene mindar-face embedded color-space="sRGB" vr-mode-ui="enabled: false"
-           device-orientation-permission-ui="enabled: true"
-           style="position: fixed; z-index: 1; width: 100vw; height: 100vh;">
-    <a-entity mindar-face-target="anchorIndex: 0">
-      <a-box color="red" depth="0.1" height="0.1" width="0.1" position="0 0 0" visible="false" id="arModel"></a-box>
-    </a-entity>
-    <a-camera active="true" position="0 0 0"></a-camera>
-  </a-scene>
+  <h2>ゲーム作成テスト</h2>
+  <label>参加人数<input type="number" id="playerCount" value="4" min="2" max="20" /></label>
+  <button id="createGame">ゲーム作成</button>
+  <p id="result"></p>
 
   <script>
-    // Firebase初期化（あなたのfirebaseConfigに差し替えてください）
     const firebaseConfig = {
       apiKey: "AIzaSyBAJQBcqvVUEfmdIaWutofWY2MbfuNoX2c",
       authDomain: "wordwolf-webar.firebaseapp.com",
@@ -92,161 +27,36 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // グローバル変数
-    let playerId = null;
-    let gameId = null;
-    let totalPlayers = 0;
-    let liarIndex = 0;
-    let wordSet = [];
-    const wordsList = [
-      ["りんご", "バナナ"],
-      ["サッカー", "野球"],
-      ["猫", "犬"],
-      ["学校", "会社"],
-      ["コーヒー", "紅茶"]
-    ];
-
-    // UI要素
-    const setupDiv = document.getElementById("setup");
-    const gameDiv = document.getElementById("game");
-    const gameIdDisplay = document.getElementById("gameIdDisplay");
-    const playerCountInput = document.getElementById("playerCount");
-    const createGameBtn = document.getElementById("createGame");
-    const joinGameBtn = document.getElementById("joinGame");
-    const joinGameIdInput = document.getElementById("joinGameId");
-    const showWordBtn = document.getElementById("showWord");
-    const wordDisplay = document.getElementById("wordDisplay");
-    const voteButton = document.getElementById("voteButton");
-    const endGameButton = document.getElementById("endGameButton");
-    const statusMessage = document.getElementById("statusMessage");
-
-    // プレイヤーが表示済みかの判定用ローカルストレージキー
-    const SEEN_KEY = "wordwolf_seen";
-
-    // ユーティリティ: 6桁の英数字ゲームID生成
     function generateGameId() {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       let id = "";
-      for(let i=0; i<6; i++) {
-        id += chars.charAt(Math.floor(Math.random()*chars.length));
-      }
+      for(let i=0; i<6; i++) id += chars.charAt(Math.floor(Math.random()*chars.length));
       return id;
     }
 
-    createGameBtn.addEventListener("click", () => {
-      const count = parseInt(playerCountInput.value);
-      if(isNaN(count) || count < 2) {
-        alert("参加人数は2人以上で入力してください");
+    document.getElementById("createGame").addEventListener("click", () => {
+      const count = parseInt(document.getElementById("playerCount").value);
+      if(isNaN(count) || count < 2){
+        alert("参加人数は2人以上で設定してください");
         return;
       }
-      totalPlayers = count;
-      playerId = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-      gameId = generateGameId();
+      const gameId = generateGameId();
+      const gameData = {
+        totalPlayers: count,
+        status: "waiting",
+        createdAt: Date.now()
+      };
 
-      wordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
-      liarIndex = Math.floor(Math.random() * totalPlayers);
-
-      // Firebaseにゲーム作成
-      db.ref(`games/${gameId}`).set({
-        totalPlayers: totalPlayers,
-        liarIndex: liarIndex,
-        wordSet: wordSet,
-        players: {},
-        status: "waiting"
-      }).then(() => {
-        joinGameInternal();
-      }).catch((e) => {
-        alert("ゲーム作成に失敗しました: "+e.message);
-      });
-    });
-
-    joinGameBtn.addEventListener("click", () => {
-      const joinId = joinGameIdInput.value.trim().toUpperCase();
-      if(!joinId) {
-        alert("ゲームIDを入力してください");
-        return;
-      }
-      gameId = joinId;
-      playerId = Date.now().toString(36) + Math.random().toString(36).slice(2,10);
-      joinGameInternal();
-    });
-
-    function joinGameInternal() {
-      if(!gameId) return;
-
-      const playerRef = db.ref(`games/${gameId}/players/${playerId}`);
-
-      playerRef.set({ seen: false, voted: false })
+      db.ref("games/" + gameId).set(gameData)
         .then(() => {
-          setupDiv.style.display = "none";
-          gameDiv.style.display = "block";
-          gameIdDisplay.textContent = gameId;
-          showWordBtn.disabled = false;
-          voteButton.style.display = "none";
-          endGameButton.style.display = "none";
-          wordDisplay.textContent = "";
-          statusMessage.textContent = "";
-          localStorage.removeItem(SEEN_KEY);
-
-          setupRealtimeListeners();
+          console.log("ゲーム作成成功: " + gameId);
+          document.getElementById("result").textContent = "ゲーム作成成功！ID: " + gameId;
         })
-        .catch(() => {
-          alert("ゲームに参加できませんでした。IDを確認してください。");
+        .catch((e) => {
+          console.error("ゲーム作成失敗:", e);
+          document.getElementById("result").textContent = "ゲーム作成失敗: " + e.message;
         });
-    }
-
-    function setupRealtimeListeners() {
-      const gameRef = db.ref(`games/${gameId}`);
-
-      gameRef.on("value", snapshot => {
-        const data = snapshot.val();
-        if(!data) {
-          alert("ゲームは終了しました。ページを再読み込みしてください。");
-          location.reload();
-          return;
-        }
-        totalPlayers = data.totalPlayers;
-        liarIndex = data.liarIndex;
-        wordSet = data.wordSet;
-        const players = data.players || {};
-        const status = data.status || "waiting";
-
-        // プレイヤー数取得
-        const joinedCount = Object.keys(players).length;
-
-        if(status === "waiting") {
-          statusMessage.textContent = `参加者: ${joinedCount} / ${totalPlayers} 人`;
-          if(joinedCount >= totalPlayers) {
-            // 全員参加したらゲーム開始に切り替え
-            gameRef.update({ status: "started" });
-          }
-        } else if(status === "started") {
-          statusMessage.textContent = `ゲーム中 参加者: ${joinedCount} 人`;
-          voteButton.style.display = "inline-block";
-          endGameButton.style.display = "inline-block";
-        } else if(status === "ended") {
-          statusMessage.textContent = "ゲームは終了しました";
-          voteButton.style.display = "none";
-          endGameButton.style.display = "none";
-          showWordBtn.disabled = true;
-        }
-      });
-    }
-
-    showWordBtn.addEventListener("click", () => {
-      if(localStorage.getItem(SEEN_KEY) === "yes") {
-        alert("この端末はすでにお題を見ています");
-        return;
-      }
-
-      const playerIndex = getPlayerIndex();
-
-      if(playerIndex === -1) {
-        alert("プレイヤー情報が見つかりません。");
-        return;
-      }
-
-      const yourWord = (playerIndex === liarIndex) ? wordSet[1] : wordSet[0];
-      wordDisplay.textContent = `あなたのお題：${yourWord}`;
-
-      //
+    });
+  </script>
+</body>
+</html>
