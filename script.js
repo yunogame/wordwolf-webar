@@ -22,7 +22,8 @@ document.getElementById("createGame").addEventListener("click", async () => {
     liarIndex,
     players: [],
     status: "waiting",
-    votes: {}
+    votes: {},
+    votingStarted: false
   });
 
   joinGame(currentGameId);
@@ -63,7 +64,13 @@ function joinGame(gameId) {
     document.getElementById("joinSection").style.display = "block";
     document.getElementById("gameIdDisplay").textContent = gameId;
 
-    // 投票監視を開始
+    // 投票開始ボタンを表示するか判断
+    setupVotingStartButton();
+
+    // votingStarted の監視開始
+    listenVotingStarted();
+
+    // 投票監視も開始
     listenVotes();
   }).catch(error => {
     alert("参加処理でエラーが発生しました: " + error.message);
@@ -78,12 +85,46 @@ document.getElementById("showWord").addEventListener("click", () => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
     document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
-
-    // お題を見たら投票開始も可能（ここで自動的に開始）
-    startVoting();
   });
 });
 
+// 投票開始ボタン設置
+function setupVotingStartButton() {
+  // ボタンが既にあれば消す
+  const oldBtn = document.getElementById("startVotingBtn");
+  if (oldBtn) oldBtn.remove();
+
+  // votingStarted が false のときだけボタンを表示
+  database.ref(`games/${currentGameId}/votingStarted`).once("value").then(snapshot => {
+    if (snapshot.val() === true) return; // すでに開始済みなら表示しない
+
+    const btn = document.createElement("button");
+    btn.id = "startVotingBtn";
+    btn.textContent = "投票を始める";
+    btn.style.marginTop = "10px";
+    btn.addEventListener("click", () => {
+      // Firebaseで投票開始フラグを立てる
+      database.ref(`games/${currentGameId}/votingStarted`).set(true);
+      btn.disabled = true;
+    });
+    document.getElementById("joinSection").appendChild(btn);
+  });
+}
+
+// votingStarted監視しtrueなら投票UI表示
+function listenVotingStarted() {
+  const votingStartedRef = database.ref(`games/${currentGameId}/votingStarted`);
+  votingStartedRef.on("value", snapshot => {
+    if (snapshot.val() === true) {
+      // 投票開始ボタンはもういらないので消す
+      const btn = document.getElementById("startVotingBtn");
+      if (btn) btn.remove();
+
+      // 投票UIを表示
+      startVoting();
+    }
+  });
+}
 
 // 投票関連
 
