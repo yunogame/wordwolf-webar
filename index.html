@@ -2,116 +2,178 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf オフライン版</title>
+  <title>WordWolf WebAR with Firebase</title>
+
+  <!-- A-FrameやMindARの読み込みはここ -->
+
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 20px; background: #222; color: white; }
-    .container { max-width: 600px; margin: auto; text-align: center; }
-    button, select { margin-top: 10px; padding: 10px; font-size: 1em; }
-    #result, #voteSection, #finalResult { margin-top: 20px; }
+    body { margin: 0; font-family: sans-serif; }
+    #ui {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); color: white; padding: 15px; border-radius: 10px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    button, input { margin-top: 10px; padding: 8px; font-size: 1em; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>WordWolf オフライン</h1>
 
-    <div id="setup">
-      <label>参加人数: </label>
-      <input type="number" id="playerCount" min="2" max="20" value="4"><br>
-      <label>あなたは何番目のプレイヤー？</label>
-      <input type="number" id="playerNumber" min="1" max="20"><br>
-      <button id="startGame">ゲーム開始</button>
-    </div>
-
-    <div id="game" style="display:none;">
-      <p id="yourWord">お題を読み込んでいます...</p>
-      <button id="voteBtn">投票に進む</button>
-    </div>
-
-    <div id="voteSection" style="display:none;">
-      <p>怪しいと思うプレイヤーの番号を選んでください：</p>
-      <select id="voteSelect"></select><br>
-      <button id="submitVote">投票する</button>
-    </div>
-
-    <div id="finalResult" style="display:none;">
-      <h3>投票結果</h3>
-      <div id="voteResults"></div>
-      <p id="correctWolf"></p>
-      <button onclick="location.reload()">再プレイ</button>
-    </div>
+  <div id="ui">
+    <label>参加人数：
+      <input type="number" id="playerCount" min="2" max="20" value="4">
+    </label>
+    <button id="startGame">スタート</button>
+    <button id="showWord" style="display:none;">お題を見る</button>
+    <div id="wordDisplay" style="margin-top:10px;"></div>
   </div>
 
-<script>
-const words = [
-  ["りんご", "バナナ"],
-  ["サッカー", "野球"],
-  ["猫", "犬"],
-  ["学校", "会社"],
-  ["コーヒー", "紅茶"]
-];
-let playerCount = 0;
-let playerNumber = 0;
-let liarIndex = 0;
-let voteCounts = {};
-let voted = false;
+  <!-- A-Frameシーンなど -->
 
-document.getElementById("startGame").addEventListener("click", () => {
-  playerCount = parseInt(document.getElementById("playerCount").value);
-  playerNumber = parseInt(document.getElementById("playerNumber").value);
+  <script type="module">
+    // Firebaseモジュールの読み込み
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-  if (isNaN(playerCount) || isNaN(playerNumber) || playerNumber < 1 || playerNumber > playerCount) {
-    alert("正しい人数と自分のプレイヤー番号を入力してください");
-    return;
-  }
+    // Firebase設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBAJQBcqvVUEfmdIaWutofWY2MbfuNoX2c",
+      authDomain: "wordwolf-webar.firebaseapp.com",
+      databaseURL: "https://wordwolf-webar-default-rtdb.firebaseio.com",
+      projectId: "wordwolf-webar",
+      storageBucket: "wordwolf-webar.firebasestorage.app",
+      messagingSenderId: "422294380099",
+      appId: "1:422294380099:web:5df64a14defed9ae487ef6",
+      measurementId: "G-XZ7FETM5XF"
+    };
 
-  const set = words[Math.floor(Math.random() * words.length)];
-  liarIndex = Math.floor(Math.random() * playerCount);
-  const isLiar = (playerNumber - 1 === liarIndex);
-  const myWord = isLiar ? set[1] : set[0];
-  document.getElementById("yourWord").innerText = "あなたのお題は: " + myWord;
+    // Firebase初期化
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-  localStorage.setItem("wordwolf_seen", "yes");
-  localStorage.setItem("wordwolf_player_number", playerNumber);
-  localStorage.setItem("wordwolf_word", myWord);
-  localStorage.setItem("wordwolf_liar", liarIndex);
+    // ゲームの基本情報
+    const words = [
+      ["りんご", "バナナ"],
+      ["サッカー", "野球"],
+      ["猫", "犬"],
+      ["学校", "会社"],
+      ["コーヒー", "紅茶"]
+    ];
 
-  document.getElementById("setup").style.display = "none";
-  document.getElementById("game").style.display = "block";
+    const startBtn = document.getElementById("startGame");
+    const showWordBtn = document.getElementById("showWord");
+    const wordDisplay = document.getElementById("wordDisplay");
+    const playerCountInput = document.getElementById("playerCount");
 
-  // 投票選択肢をセットアップ
-  const voteSelect = document.getElementById("voteSelect");
-  for (let i = 1; i <= playerCount; i++) {
-    const option = document.createElement("option");
-    option.value = i;
-    option.text = `${i}番のプレイヤー`;
-    voteSelect.appendChild(option);
-  }
-});
+    let gameId = null;      // ゲームセッションID
+    let playerIndex = null; // 参加者番号（0〜playerCount-1）
 
-document.getElementById("voteBtn").addEventListener("click", () => {
-  document.getElementById("game").style.display = "none";
-  document.getElementById("voteSection").style.display = "block";
-});
+    // ホストがゲームを作る（スタートボタン）
+    startBtn.addEventListener("click", async () => {
+      const count = parseInt(playerCountInput.value);
+      if (isNaN(count) || count < 2) {
+        alert("2人以上を入力してください");
+        return;
+      }
 
-document.getElementById("submitVote").addEventListener("click", () => {
-  if (voted) return;
-  const votedFor = document.getElementById("voteSelect").value;
-  voteCounts[votedFor] = (voteCounts[votedFor] || 0) + 1;
-  voted = true;
+      // ゲームIDはランダムに生成（例: timestamp）
+      gameId = "game_" + Date.now();
 
-  // 仮に1端末用なので即結果
-  document.getElementById("voteSection").style.display = "none";
-  document.getElementById("finalResult").style.display = "block";
+      // お題セットをランダムに選択
+      const wordSet = words[Math.floor(Math.random() * words.length)];
+      const liarIndex = Math.floor(Math.random() * count);
 
-  let resultHTML = "";
-  for (const key in voteCounts) {
-    resultHTML += `${key}番に ${voteCounts[key]} 票<br>`;
-  }
-  document.getElementById("voteResults").innerHTML = resultHTML;
+      // Firebaseにゲームデータを書き込み
+      await set(ref(database, 'games/' + gameId), {
+        playerCount: count,
+        liarIndex: liarIndex,
+        wordSet: wordSet,
+        players: {}
+      });
 
-  const liar = parseInt(localStorage.getItem("wordwolf_liar")) + 1;
-  document.getElementById("correctWolf").innerText = `正解のウルフは ${liar} 番のプレイヤーです`;
-});
-</script>
+      playerIndex = 0; // ホストは1人目
+
+      startBtn.style.display = "none";
+      playerCountInput.style.display = "none";
+      showWordBtn.style.display = "inline-block";
+      wordDisplay.textContent = "ゲームを作成しました。お題を見るボタンを押してください。";
+
+      // ここでQRコード表示などを追加するとよいです
+      console.log("ゲームID:", gameId);
+    });
+
+    // 参加者がQRコード等からgameIdを知っている想定で
+    // 簡単な「参加」ボタン処理例（実際はQRスキャンなどでgameIdを取得）
+    // ここは別途実装が必要です
+
+    // お題を見るボタン
+    showWordBtn.addEventListener("click", async () => {
+      if (!gameId) {
+        alert("ゲームがまだ開始されていません");
+        return;
+      }
+
+      // 自分の参加番号をFirebaseに登録（ホストは0、他は参加時に自動登録）
+      const playerRef = ref(database, `games/${gameId}/players/player${playerIndex}`);
+
+      // お題データを取得
+      const snapshot = await get(ref(database, `games/${gameId}`));
+      if (!snapshot.exists()) {
+        wordDisplay.textContent = "ゲーム情報が見つかりません";
+        return;
+      }
+
+      const gameData = snapshot.val();
+
+      // 自分の役割によってお題を決定
+      const word = (playerIndex === gameData.liarIndex) ? gameData.wordSet[1] : gameData.wordSet[0];
+
+      wordDisplay.textContent = `あなたのお題：${word}`;
+
+      // Firebaseに「見た」状態を保存しておく
+      await set(playerRef, { seen: true, word: word });
+      showWordBtn.disabled = true;
+    });
+
+    // 他端末はゲームIDを入力するかQRコードでgameIdを読み込む想定
+    // 例として簡単な参加処理を関数化（別途UI実装が必要）
+    async function joinGame(joinGameId) {
+      const snapshot = await get(ref(database, `games/${joinGameId}`));
+      if (!snapshot.exists()) {
+        alert("ゲームが見つかりません");
+        return;
+      }
+      const gameData = snapshot.val();
+
+      // 空いてる参加番号を探す
+      const players = gameData.players || {};
+      const count = gameData.playerCount;
+      for (let i = 0; i < count; i++) {
+        if (!players[`player${i}`]) {
+          playerIndex = i;
+          break;
+        }
+      }
+      if (playerIndex === null) {
+        alert("参加人数が上限に達しています");
+        return;
+      }
+
+      gameId = joinGameId;
+
+      // 登録だけはしておく（まだお題は見てない状態）
+      await set(ref(database, `games/${gameId}/players/player${playerIndex}`), { seen: false });
+
+      startBtn.style.display = "none";
+      playerCountInput.style.display = "none";
+      showWordBtn.style.display = "inline-block";
+      wordDisplay.textContent = "参加しました。お題を見るボタンを押してください。";
+      showWordBtn.disabled = false;
+    }
+
+    // 例：実際はQRスキャン等でgameIdを取得してjoinGameを呼ぶ
+    // joinGame("game_123456789");
+
+  </script>
+
 </body>
 </html>
