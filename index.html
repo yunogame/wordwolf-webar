@@ -2,160 +2,116 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf 投票付き</title>
+  <title>WordWolf オフライン版</title>
   <style>
-    body { margin: 0; font-family: sans-serif; background: #111; color: white; }
-    #ui {
-      max-width: 400px; margin: 20px auto; padding: 20px;
-      background: rgba(0,0,0,0.7); border-radius: 10px; text-align: center;
-    }
-    button, input {
-      margin-top: 10px;
-      padding: 10px;
-      font-size: 1em;
-    }
-    #voteSection, #resultSection { display: none; margin-top: 20px; }
+    body { font-family: sans-serif; margin: 0; padding: 20px; background: #222; color: white; }
+    .container { max-width: 600px; margin: auto; text-align: center; }
+    button, select { margin-top: 10px; padding: 10px; font-size: 1em; }
+    #result, #voteSection, #finalResult { margin-top: 20px; }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>WordWolf オフライン</h1>
 
-<div id="ui">
-  <div id="setup">
-    <label>参加人数：</label>
-    <input type="number" id="playerCount" min="2" max="20" value="4"><br>
-    <button id="startGame">スタート</button>
-  </div>
+    <div id="setup">
+      <label>参加人数: </label>
+      <input type="number" id="playerCount" min="2" max="20" value="4"><br>
+      <label>あなたは何番目のプレイヤー？</label>
+      <input type="number" id="playerNumber" min="1" max="20"><br>
+      <button id="startGame">ゲーム開始</button>
+    </div>
 
-  <div id="wordSection" style="display:none;">
-    <button id="showWord">お題を見る</button>
-    <div id="wordDisplay" style="margin-top:10px;"></div>
-    <button id="goVote" style="display:none;">投票へ進む</button>
-  </div>
+    <div id="game" style="display:none;">
+      <p id="yourWord">お題を読み込んでいます...</p>
+      <button id="voteBtn">投票に進む</button>
+    </div>
 
-  <div id="voteSection">
-    <label>あなたがウルフだと思う人の番号（1〜人数）</label><br>
-    <input type="number" id="voteInput" min="1"><br>
-    <button id="submitVote">投票する</button>
-    <div id="voteStatus" style="margin-top:10px;"></div>
-  </div>
+    <div id="voteSection" style="display:none;">
+      <p>怪しいと思うプレイヤーの番号を選んでください：</p>
+      <select id="voteSelect"></select><br>
+      <button id="submitVote">投票する</button>
+    </div>
 
-  <div id="resultSection">
-    <div id="resultDisplay"></div>
-    <button id="resetGame">もう一度プレイ</button>
+    <div id="finalResult" style="display:none;">
+      <h3>投票結果</h3>
+      <div id="voteResults"></div>
+      <p id="correctWolf"></p>
+      <button onclick="location.reload()">再プレイ</button>
+    </div>
   </div>
-</div>
 
 <script>
-  const words = [
-    ["りんご", "バナナ"],
-    ["猫", "犬"],
-    ["学校", "会社"],
-    ["サッカー", "野球"]
-  ];
+const words = [
+  ["りんご", "バナナ"],
+  ["サッカー", "野球"],
+  ["猫", "犬"],
+  ["学校", "会社"],
+  ["コーヒー", "紅茶"]
+];
+let playerCount = 0;
+let playerNumber = 0;
+let liarIndex = 0;
+let voteCounts = {};
+let voted = false;
 
-  let totalPlayers = 4;
-  let liarIndex = 0;
-  let wordSet = [];
-  let shown = 0;
-  let votes = [];
+document.getElementById("startGame").addEventListener("click", () => {
+  playerCount = parseInt(document.getElementById("playerCount").value);
+  playerNumber = parseInt(document.getElementById("playerNumber").value);
 
-  const playerCountInput = document.getElementById("playerCount");
-  const startBtn = document.getElementById("startGame");
-  const showWordBtn = document.getElementById("showWord");
-  const goVoteBtn = document.getElementById("goVote");
-  const wordDisplay = document.getElementById("wordDisplay");
-
-  const voteSection = document.getElementById("voteSection");
-  const voteInput = document.getElementById("voteInput");
-  const submitVote = document.getElementById("submitVote");
-  const voteStatus = document.getElementById("voteStatus");
-
-  const resultSection = document.getElementById("resultSection");
-  const resultDisplay = document.getElementById("resultDisplay");
-  const resetBtn = document.getElementById("resetGame");
-
-  startBtn.addEventListener("click", () => {
-    totalPlayers = parseInt(playerCountInput.value);
-    if (isNaN(totalPlayers) || totalPlayers < 2) {
-      alert("2人以上を入力してください");
-      return;
-    }
-
-    liarIndex = Math.floor(Math.random() * totalPlayers);
-    wordSet = words[Math.floor(Math.random() * words.length)];
-    shown = 0;
-    votes = [];
-
-    document.getElementById("setup").style.display = "none";
-    document.getElementById("wordSection").style.display = "block";
-    wordDisplay.innerText = "";
-    showWordBtn.disabled = false;
-    goVoteBtn.style.display = "none";
-
-    localStorage.removeItem("wordwolf_word");
-  });
-
-  showWordBtn.addEventListener("click", () => {
-    if (shown >= totalPlayers) {
-      wordDisplay.innerText = "全員分表示済みです";
-      showWordBtn.disabled = true;
-      goVoteBtn.style.display = "inline-block";
-      return;
-    }
-
-    const isLiar = (shown === liarIndex);
-    const word = isLiar ? wordSet[1] : wordSet[0];
-    wordDisplay.innerText = `あなたのお題：${word}`;
-    shown++;
-  });
-
-  goVoteBtn.addEventListener("click", () => {
-    document.getElementById("wordSection").style.display = "none";
-    voteSection.style.display = "block";
-    voteStatus.innerText = "";
-    voteInput.value = "";
-  });
-
-  submitVote.addEventListener("click", () => {
-    const vote = parseInt(voteInput.value);
-    if (isNaN(vote) || vote < 1 || vote > totalPlayers) {
-      voteStatus.innerText = "正しい番号を入力してください";
-      return;
-    }
-
-    votes.push(vote - 1); // 0ベースで保存
-    voteStatus.innerText = `投票済み（${votes.length}/${totalPlayers}）`;
-
-    if (votes.length >= totalPlayers) {
-      showResult();
-    } else {
-      voteInput.value = "";
-    }
-  });
-
-  function showResult() {
-    voteSection.style.display = "none";
-    resultSection.style.display = "block";
-
-    const voteCount = new Array(totalPlayers).fill(0);
-    votes.forEach(v => voteCount[v]++);
-
-    const maxVotes = Math.max(...voteCount);
-    const suspects = voteCount.map((v, i) => v === maxVotes ? i : -1).filter(i => i !== -1);
-
-    const isLiarCaught = suspects.includes(liarIndex);
-    resultDisplay.innerText =
-      `ウルフはプレイヤー${liarIndex + 1}でした。\n` +
-      (isLiarCaught ? "ウルフは見破られました！" : "ウルフは逃げ切りました！");
+  if (isNaN(playerCount) || isNaN(playerNumber) || playerNumber < 1 || playerNumber > playerCount) {
+    alert("正しい人数と自分のプレイヤー番号を入力してください");
+    return;
   }
 
-  resetBtn.addEventListener("click", () => {
-    document.getElementById("setup").style.display = "block";
-    document.getElementById("wordSection").style.display = "none";
-    voteSection.style.display = "none";
-    resultSection.style.display = "none";
-  });
-</script>
+  const set = words[Math.floor(Math.random() * words.length)];
+  liarIndex = Math.floor(Math.random() * playerCount);
+  const isLiar = (playerNumber - 1 === liarIndex);
+  const myWord = isLiar ? set[1] : set[0];
+  document.getElementById("yourWord").innerText = "あなたのお題は: " + myWord;
 
+  localStorage.setItem("wordwolf_seen", "yes");
+  localStorage.setItem("wordwolf_player_number", playerNumber);
+  localStorage.setItem("wordwolf_word", myWord);
+  localStorage.setItem("wordwolf_liar", liarIndex);
+
+  document.getElementById("setup").style.display = "none";
+  document.getElementById("game").style.display = "block";
+
+  // 投票選択肢をセットアップ
+  const voteSelect = document.getElementById("voteSelect");
+  for (let i = 1; i <= playerCount; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.text = `${i}番のプレイヤー`;
+    voteSelect.appendChild(option);
+  }
+});
+
+document.getElementById("voteBtn").addEventListener("click", () => {
+  document.getElementById("game").style.display = "none";
+  document.getElementById("voteSection").style.display = "block";
+});
+
+document.getElementById("submitVote").addEventListener("click", () => {
+  if (voted) return;
+  const votedFor = document.getElementById("voteSelect").value;
+  voteCounts[votedFor] = (voteCounts[votedFor] || 0) + 1;
+  voted = true;
+
+  // 仮に1端末用なので即結果
+  document.getElementById("voteSection").style.display = "none";
+  document.getElementById("finalResult").style.display = "block";
+
+  let resultHTML = "";
+  for (const key in voteCounts) {
+    resultHTML += `${key}番に ${voteCounts[key]} 票<br>`;
+  }
+  document.getElementById("voteResults").innerHTML = resultHTML;
+
+  const liar = parseInt(localStorage.getItem("wordwolf_liar")) + 1;
+  document.getElementById("correctWolf").innerText = `正解のウルフは ${liar} 番のプレイヤーです`;
+});
+</script>
 </body>
 </html>
