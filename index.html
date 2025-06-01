@@ -2,45 +2,41 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf WebAR1.3</title>
+  <title>WordWolf WebAR1.4</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="firebase-config.js"></script>
   <script src="script.js" defer></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #joinSection, #votingSection { display: none; }
-    button { margin: 5px; }
+    #setup, #joinSection, #voteSection { display: none; }
   </style>
 </head>
 <body>
   <h1>WordWolf Firebase</h1>
 
   <div id="nameInputSection">
-    <label>あなたの名前: <input type="text" id="playerNameInput" /></label>
-    <button id="setNameButton">名前を決定</button>
+    <label>プレイヤー名: <input type="text" id="playerNameInput" /></label>
+    <button id="enterName">決定</button>
   </div>
 
-  <div id="setup" style="display:none;">
+  <div id="setup">
     <label>参加人数: <input type="number" id="playerCount" min="2" value="4" /></label>
     <button id="createGame">ゲーム作成</button>
   </div>
 
-  <div id="joinGameSection" style="display:none;">
-    <label>ゲームID入力: <input type="text" id="joinGameIdInput" /></label>
-    <button id="joinGameButton">参加する</button>
-  </div>
-
   <div id="joinSection">
     <p>ゲームID: <span id="gameIdDisplay"></span></p>
+    <div id="qrCodeContainer"></div>
     <button id="showWord">お題を見る</button>
     <p id="wordDisplay"></p>
+    <button id="startVote">投票を開始</button>
   </div>
 
-  <div id="votingSection">
-    <h2>投票タイム！</h2>
-    <p>誰に投票しますか？</p>
-    <div id="voteButtons"></div>
+  <div id="voteSection">
+    <h3>投票してください</h3>
+    <div id="voteOptions"></div>
     <p id="voteResult"></p>
   </div>
 </body>
