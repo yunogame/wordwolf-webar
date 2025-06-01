@@ -142,8 +142,6 @@ function listenGameUpdates(gameId) {
       .map(([index, count]) => `${players[index]}: ${count}票`)
       .join("\n");
 
-    let resultText = results;
-
     if (Object.keys(game.votes).length === players.length) {
       let maxVotes = 0;
       let topIndex = null;
@@ -154,11 +152,13 @@ function listenGameUpdates(gameId) {
         }
       }
 
-      resultText += `\n\n${(topIndex === game.liarIndex)
-        ? `🎉 ウルフは ${players[topIndex]} でした！市民の勝ち！`
-        : `😈 ウルフは ${players[game.liarIndex]} でした…ウルフの勝ち！`}`;
+      if (topIndex === game.liarIndex) {
+        alert(`🎉 ウルフは ${players[topIndex]} でした！市民の勝ち！`);
+      } else {
+        alert(`😈 ウルフは ${players[game.liarIndex]} でした…ウルフの勝ち！`);
+      }
     }
 
-    document.getElementById("voteResult").innerText = resultText;
+    document.getElementById("voteResult").innerText = results;
   });
 }
