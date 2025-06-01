@@ -115,7 +115,7 @@ function castVote(targetIndex) {
   database.ref(`games/${currentGameId}/votes/${myIndex}`).set(targetIndex);
 }
 
-// 投票結果の表示
+// 投票結果の表示とウルフ判定
 database.ref("games").on("value", snapshot => {
   if (!currentGameId) return;
   const game = snapshot.val()[currentGameId];
@@ -124,13 +124,34 @@ database.ref("games").on("value", snapshot => {
   const voteCounts = {};
   const players = game.players || [];
 
+  // 投票数カウント
   Object.values(game.votes).forEach(v => {
     voteCounts[v] = (voteCounts[v] || 0) + 1;
   });
 
+  // 結果表示
   const results = Object.entries(voteCounts)
     .map(([index, count]) => `${players[index]}: ${count}票`)
     .join("\n");
 
-  document.getElementById("voteResult").innerText = results;
+  let resultText = results;
+
+  // プレイヤー全員が投票したらウルフ判定
+  if (Object.keys(game.votes).length === players.length) {
+    // 最多得票プレイヤーを探す（同率1位が複数なら最初の1人）
+    let maxVotes = 0;
+    let topIndex = null;
+    for (const [index, count] of Object.entries(voteCounts)) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        topIndex = parseInt(index);
+      }
+    }
+
+    resultText += `\n\n${(topIndex === game.liarIndex)
+      ? `🎉 ウルフは ${players[topIndex]} でした！市民の勝ち！`
+      : `😈 ウルフは ${players[game.liarIndex]} でした…ウルフの勝ち！`}`;
+  }
+
+  document.getElementById("voteResult").innerText = resultText;
 });
