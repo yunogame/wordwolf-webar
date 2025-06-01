@@ -3,7 +3,7 @@ let currentGameId = null;
 let myIndex = null;
 let myName = null;
 
-// プレイヤー名の入力処理
+// プレイヤー名決定後の処理
 document.getElementById("enterName").addEventListener("click", () => {
   const nameInput = document.getElementById("playerNameInput").value.trim();
   if (!nameInput) {
@@ -11,13 +11,16 @@ document.getElementById("enterName").addEventListener("click", () => {
     return;
   }
   myName = nameInput;
-  document.getElementById("nameInputSection").style.display = "none";
-  document.getElementById("setup").style.display = "block";
 
   const params = new URLSearchParams(window.location.search);
   const gameId = params.get("gameId");
+
+  document.getElementById("nameInputSection").style.display = "none";
+
   if (gameId) {
-    joinGame(gameId);
+    joinGame(gameId); // QRでアクセスされた場合
+  } else {
+    document.getElementById("setup").style.display = "block"; // 自分で部屋を作る
   }
 });
 
@@ -48,11 +51,11 @@ document.getElementById("createGame").addEventListener("click", async () => {
   showQRCode(currentGameId);
 });
 
-// ゲーム参加
+// ゲーム参加処理
 function joinGame(gameId) {
   currentGameId = gameId;
-
   const playerRef = database.ref(`games/${gameId}/players`);
+
   playerRef.once("value").then(snapshot => {
     const players = snapshot.val() || [];
     myIndex = players.length;
@@ -65,7 +68,17 @@ function joinGame(gameId) {
   document.getElementById("gameIdDisplay").textContent = gameId;
 }
 
-// お題表示
+// QRコード生成
+function showQRCode(gameId) {
+  const url = `${location.origin}${location.pathname}?gameId=${gameId}`;
+  const qrContainer = document.getElementById("qrCodeContainer");
+  qrContainer.innerHTML = "";
+  QRCode.toCanvas(document.createElement("canvas"), url, { width: 200 }, (err, canvas) => {
+    if (!err) qrContainer.appendChild(canvas);
+  });
+}
+
+// お題を見る
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -75,16 +88,6 @@ document.getElementById("showWord").addEventListener("click", () => {
     document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
   });
 });
-
-// QRコード表示
-function showQRCode(gameId) {
-  const url = `${location.origin}${location.pathname}?gameId=${gameId}`;
-  const qrContainer = document.getElementById("qrCodeContainer");
-  qrContainer.innerHTML = "";
-  QRCode.toCanvas(document.createElement("canvas"), url, { width: 200 }, (err, canvas) => {
-    if (!err) qrContainer.appendChild(canvas);
-  });
-}
 
 // 投票開始
 document.getElementById("startVote").addEventListener("click", () => {
@@ -112,7 +115,7 @@ function castVote(targetIndex) {
   database.ref(`games/${currentGameId}/votes/${myIndex}`).set(targetIndex);
 }
 
-// 投票結果表示
+// 投票結果の表示
 database.ref("games").on("value", snapshot => {
   if (!currentGameId) return;
   const game = snapshot.val()[currentGameId];
@@ -120,6 +123,7 @@ database.ref("games").on("value", snapshot => {
 
   const voteCounts = {};
   const players = game.players || [];
+
   Object.values(game.votes).forEach(v => {
     voteCounts[v] = (voteCounts[v] || 0) + 1;
   });
