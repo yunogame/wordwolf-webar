@@ -1,20 +1,24 @@
 const wordsList = [["りんご", "バナナ"], ["猫", "犬"], ["海", "山"]];
 let currentGameId = null;
 let myIndex = null;
-let myName = "";
+let myName = null;
 
-// 名前決定
-document.getElementById("setNameButton").addEventListener("click", () => {
+// プレイヤー名の入力処理
+document.getElementById("enterName").addEventListener("click", () => {
   const nameInput = document.getElementById("playerNameInput").value.trim();
   if (!nameInput) {
     alert("名前を入力してください");
     return;
   }
   myName = nameInput;
-
   document.getElementById("nameInputSection").style.display = "none";
   document.getElementById("setup").style.display = "block";
-  document.getElementById("joinGameSection").style.display = "block";
+
+  const params = new URLSearchParams(window.location.search);
+  const gameId = params.get("gameId");
+  if (gameId) {
+    joinGame(gameId);
+  }
 });
 
 // ゲーム作成
@@ -36,59 +40,29 @@ document.getElementById("createGame").addEventListener("click", async () => {
     wordSet,
     liarIndex,
     players: [],
-    playerNames: [],
     status: "waiting",
-    votes: {},
-    votingStarted: false
+    votes: {}
   });
 
   joinGame(currentGameId);
+  showQRCode(currentGameId);
 });
 
-// ゲームに参加
-document.getElementById("joinGameButton").addEventListener("click", () => {
-  const gameId = document.getElementById("joinGameIdInput").value.trim();
-  if (!gameId) {
-    alert("ゲームIDを入力してください");
-    return;
-  }
-
-  database.ref(`games/${gameId}`).once("value").then(snapshot => {
-    if (!snapshot.exists()) {
-      alert("指定のゲームIDは存在しません");
-      return;
-    }
-
-    joinGame(gameId);
-  });
-});
-
+// ゲーム参加
 function joinGame(gameId) {
   currentGameId = gameId;
-  const playersRef = database.ref(`games/${gameId}/players`);
-  const namesRef = database.ref(`games/${gameId}/playerNames`);
 
-  playersRef.transaction(players => {
-    if (!players) players = [];
+  const playerRef = database.ref(`games/${gameId}/players`);
+  playerRef.once("value").then(snapshot => {
+    const players = snapshot.val() || [];
     myIndex = players.length;
-    players.push(true);
-    return players;
-  });
-
-  namesRef.transaction(names => {
-    if (!names) names = [];
-    names.push(myName);
-    return names;
+    players.push(myName);
+    playerRef.set(players);
   });
 
   document.getElementById("setup").style.display = "none";
-  document.getElementById("joinGameSection").style.display = "none";
   document.getElementById("joinSection").style.display = "block";
   document.getElementById("gameIdDisplay").textContent = gameId;
-
-  setupVotingStartButton();
-  listenVotingStarted();
-  listenVotes();
 }
 
 // お題表示
@@ -102,106 +76,57 @@ document.getElementById("showWord").addEventListener("click", () => {
   });
 });
 
-// 投票開始ボタン
-function setupVotingStartButton() {
-  const oldBtn = document.getElementById("startVotingBtn");
-  if (oldBtn) oldBtn.remove();
-
-  database.ref(`games/${currentGameId}/votingStarted`).once("value").then(snapshot => {
-    if (snapshot.val()) return;
-
-    const btn = document.createElement("button");
-    btn.id = "startVotingBtn";
-    btn.textContent = "投票を始める";
-    btn.addEventListener("click", () => {
-      database.ref(`games/${currentGameId}/votingStarted`).set(true);
-      btn.disabled = true;
-    });
-    document.getElementById("joinSection").appendChild(btn);
+// QRコード表示
+function showQRCode(gameId) {
+  const url = `${location.origin}${location.pathname}?gameId=${gameId}`;
+  const qrContainer = document.getElementById("qrCodeContainer");
+  qrContainer.innerHTML = "";
+  QRCode.toCanvas(document.createElement("canvas"), url, { width: 200 }, (err, canvas) => {
+    if (!err) qrContainer.appendChild(canvas);
   });
 }
 
-// 投票UIの表示
-function listenVotingStarted() {
-  const votingStartedRef = database.ref(`games/${currentGameId}/votingStarted`);
-  votingStartedRef.on("value", snapshot => {
-    if (snapshot.val()) {
-      const btn = document.getElementById("startVotingBtn");
-      if (btn) btn.remove();
-      startVoting();
-    }
-  });
-}
+// 投票開始
+document.getElementById("startVote").addEventListener("click", () => {
+  if (!currentGameId) return;
 
-function startVoting() {
-  document.getElementById("votingSection").style.display = "block";
-  document.getElementById("voteResult").innerText = "";
+  const voteOptions = document.getElementById("voteOptions");
+  voteOptions.innerHTML = "";
 
-  const voteButtons = document.getElementById("voteButtons");
-  voteButtons.innerHTML = "";
-
-  database.ref(`games/${currentGameId}/playerNames`).once("value").then(snapshot => {
-    const names = snapshot.val() || [];
-    names.forEach((name, i) => {
-      if (i === myIndex) return;
-
+  database.ref(`games/${currentGameId}/players`).once("value").then(snapshot => {
+    const players = snapshot.val();
+    players.forEach((name, index) => {
       const btn = document.createElement("button");
-      btn.textContent = `${name} に投票`;
-      btn.addEventListener("click", () => castVote(i, name));
-      voteButtons.appendChild(btn);
+      btn.innerText = name;
+      btn.addEventListener("click", () => castVote(index));
+      voteOptions.appendChild(btn);
     });
   });
+
+  document.getElementById("voteSection").style.display = "block";
+});
+
+// 投票処理
+function castVote(targetIndex) {
+  if (!currentGameId || myIndex === null) return;
+  database.ref(`games/${currentGameId}/votes/${myIndex}`).set(targetIndex);
 }
 
-function castVote(targetIndex, name) {
-  const voteRef = database.ref(`games/${currentGameId}/votes/${myIndex}`);
-  voteRef.set(targetIndex).then(() => {
-    document.getElementById("voteResult").innerText = `${name} に投票しました。結果を待っています…`;
-    document.querySelectorAll("#voteButtons button").forEach(b => b.disabled = true);
+// 投票結果表示
+database.ref("games").on("value", snapshot => {
+  if (!currentGameId) return;
+  const game = snapshot.val()[currentGameId];
+  if (!game || !game.votes) return;
+
+  const voteCounts = {};
+  const players = game.players || [];
+  Object.values(game.votes).forEach(v => {
+    voteCounts[v] = (voteCounts[v] || 0) + 1;
   });
-}
 
-function listenVotes() {
-  const votesRef = database.ref(`games/${currentGameId}/votes`);
-  votesRef.on("value", snapshot => {
-    const votes = snapshot.val() || {};
-    database.ref(`games/${currentGameId}/playerCount`).once("value").then(pcSnap => {
-      const playerCount = pcSnap.val();
+  const results = Object.entries(voteCounts)
+    .map(([index, count]) => `${players[index]}: ${count}票`)
+    .join("\n");
 
-      if (Object.keys(votes).length === playerCount) {
-        const tally = {};
-        for (const voter in votes) {
-          const voted = votes[voter];
-          tally[voted] = (tally[voted] || 0) + 1;
-        }
-
-        database.ref(`games/${currentGameId}/liarIndex`).once("value").then(liarSnap => {
-          const liar = liarSnap.val();
-
-          database.ref(`games/${currentGameId}/playerNames`).once("value").then(nameSnap => {
-            const names = nameSnap.val() || [];
-
-            let maxVotes = 0;
-            let votedOut = [];
-
-            for (const idx in tally) {
-              if (tally[idx] > maxVotes) {
-                maxVotes = tally[idx];
-                votedOut = [parseInt(idx)];
-              } else if (tally[idx] === maxVotes) {
-                votedOut.push(parseInt(idx));
-              }
-            }
-
-            let result = `投票結果:\n`;
-            votedOut.forEach(i => result += `${names[i]} が ${maxVotes}票\n`);
-            result += votedOut.includes(liar) ? "ウルフが見つかりました！" : "ウルフは逃げ切りました…";
-
-            alert(result);
-            votesRef.off();
-          });
-        });
-      }
-    });
-  });
-}
+  document.getElementById("voteResult").innerText = results;
+});
