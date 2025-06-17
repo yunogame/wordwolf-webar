@@ -39,8 +39,17 @@ document.getElementById("createGame").addEventListener("click", async () => {
 
   const qrUrl = `${location.origin}${location.pathname}?gameId=${currentGameId}`;
   document.getElementById("gameIdDisplay").textContent = currentGameId;
-  QRCode.toCanvas(document.createElement("canvas"), qrUrl, (err, canvas) => {
-    if (!err) document.getElementById("qrCodeContainer").appendChild(canvas);
+
+  // ✅ 修正版 QRコード描画
+  const container = document.getElementById("qrCodeContainer");
+  container.innerHTML = ""; // 前回のQR削除
+  QRCode.toCanvas(qrUrl, { width: 256 }, (err, canvas) => {
+    if (err) {
+      console.error("QRコード生成エラー:", err);
+      alert("QRコードの生成に失敗しました");
+      return;
+    }
+    container.appendChild(canvas);
   });
 
   joinGame(currentGameId);
@@ -109,8 +118,6 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
 
   const votes = data.votes || {};
   if (Object.keys(votes).length < data.playerCount) return;
-
-  // すでに結果表示済みならスキップ
   if (data.status === "done") return;
 
   const voteCount = {};
@@ -118,7 +125,6 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
     voteCount[index] = (voteCount[index] || 0) + 1;
   });
 
-  // 最大得票者（複数可）
   const maxVotes = Math.max(...Object.values(voteCount));
   const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
   const isLiarFound = topVoted.includes(String(data.liarIndex));
@@ -128,19 +134,15 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
     ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
     : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
 
-  // 結果をアラートで全員に表示
   alert(resultText);
 
-  // 結果表示済みとフラグを記録
   firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
 
-  // 投票結果表示
   let resultStr = "";
   Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
     resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
   });
   document.getElementById("voteResult").textContent = resultStr;
-
   document.getElementById("resetGame").style.display = "inline-block";
 });
 
