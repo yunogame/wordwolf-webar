@@ -4,6 +4,7 @@ let myIndex = null;
 let myName = "";
 let playerCount = 0;
 
+// 名前入力完了
 document.getElementById("enterName").addEventListener("click", () => {
   const name = document.getElementById("playerNameInput").value.trim();
   if (!name) return alert("名前を入力してください");
@@ -13,9 +14,10 @@ document.getElementById("enterName").addEventListener("click", () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get("gameId");
-  if (gameId) joinGame(gameId);
+  if (gameId) joinGame(gameId); // QRから遷移した場合
 });
 
+// ゲーム作成
 document.getElementById("createGame").addEventListener("click", async () => {
   playerCount = parseInt(document.getElementById("playerCount").value);
   if (playerCount < 2) return alert("2人以上のプレイヤー数を入力してください");
@@ -45,14 +47,19 @@ document.getElementById("createGame").addEventListener("click", async () => {
       alert("QRコードの生成に失敗しました");
       return;
     }
+
     const container = document.getElementById("qrCodeContainer");
     container.innerHTML = "";
     container.appendChild(canvas);
-  });
 
-  joinGame(currentGameId);
+    // 表示が終わってから参加処理を呼び出す
+    setTimeout(() => {
+      joinGame(currentGameId);
+    }, 300); // 表示の安定を確保
+  });
 });
 
+// ゲーム参加処理
 function joinGame(gameId) {
   currentGameId = gameId;
   const gameRef = firebase.database().ref(`games/${gameId}`);
@@ -76,6 +83,7 @@ function joinGame(gameId) {
   });
 }
 
+// お題表示
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -86,6 +94,7 @@ document.getElementById("showWord").addEventListener("click", () => {
   });
 });
 
+// 投票開始
 document.getElementById("startVote").addEventListener("click", () => {
   document.getElementById("voteSection").style.display = "block";
 
@@ -106,12 +115,15 @@ document.getElementById("startVote").addEventListener("click", () => {
   });
 });
 
+// 勝敗判定（全員投票完了時）
 firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   const data = snapshot.val();
   if (snapshot.key !== currentGameId) return;
 
   const votes = data.votes || {};
   if (Object.keys(votes).length < data.playerCount) return;
+
+  // すでに結果表示済みならスキップ
   if (data.status === "done") return;
 
   const voteCount = {};
@@ -119,8 +131,9 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
     voteCount[index] = (voteCount[index] || 0) + 1;
   });
 
+  // 最大得票者（複数可）
   const maxVotes = Math.max(...Object.values(voteCount));
-  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] == maxVotes);
+  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
   const isLiarFound = topVoted.includes(String(data.liarIndex));
 
   const players = data.players || [];
@@ -128,10 +141,13 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
     ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
     : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
 
+  // 結果をアラートで全員に表示
   alert(resultText);
 
+  // 結果表示済みとフラグを記録
   firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
 
+  // 投票結果表示
   let resultStr = "";
   Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
     resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
@@ -141,6 +157,7 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   document.getElementById("resetGame").style.display = "inline-block";
 });
 
+// リセット
 document.getElementById("resetGame").addEventListener("click", () => {
   firebase.database().ref(`games/${currentGameId}`).update({
     votes: {},
