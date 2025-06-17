@@ -4,7 +4,7 @@ let myIndex = null;
 let myName = null;
 let gameListener = null;
 
-// プレイヤー名決定後の処理
+// プレイヤー名決定後
 document.getElementById("enterName").addEventListener("click", () => {
   const nameInput = document.getElementById("playerNameInput").value.trim();
   if (!nameInput) {
@@ -19,7 +19,7 @@ document.getElementById("enterName").addEventListener("click", () => {
   document.getElementById("nameInputSection").style.display = "none";
 
   if (gameId) {
-    joinGame(gameId); // QRでアクセスされた場合
+    joinGame(gameId); // QR参加時
   } else {
     document.getElementById("setup").style.display = "block"; // 自分で部屋を作る
   }
@@ -62,7 +62,7 @@ function joinGame(gameId) {
     myIndex = players.length;
     players.push(myName);
     playerRef.set(players).then(() => {
-      listenGameUpdates(gameId); // 勝敗判定のリスナー登録
+      listenGameUpdates(gameId);
     });
   });
 
@@ -118,11 +118,10 @@ function castVote(targetIndex) {
   database.ref(`games/${currentGameId}/votes/${myIndex}`).set(targetIndex);
 }
 
-// 勝敗判定リスナー登録関数
+// 勝敗判定とリスナー
 function listenGameUpdates(gameId) {
-  if (gameListener) {
-    gameListener.off();
-  }
+  if (gameListener) gameListener.off();
+
   const gameRef = database.ref(`games/${gameId}`);
   gameListener = gameRef.on("value", snapshot => {
     const game = snapshot.val();
@@ -142,6 +141,8 @@ function listenGameUpdates(gameId) {
       .map(([index, count]) => `${players[index]}: ${count}票`)
       .join("\n");
 
+    document.getElementById("voteResult").innerText = results;
+
     if (Object.keys(game.votes).length === players.length) {
       let maxVotes = 0;
       let topIndex = null;
@@ -157,8 +158,34 @@ function listenGameUpdates(gameId) {
       } else {
         alert(`😈 ウルフは ${players[game.liarIndex]} でした…ウルフの勝ち！`);
       }
-    }
 
-    document.getElementById("voteResult").innerText = results;
+      // 再プレイボタン表示
+      document.getElementById("resetGame").style.display = "block";
+    }
   });
 }
+
+// 再プレイ処理
+document.getElementById("resetGame").addEventListener("click", () => {
+  if (!currentGameId) return;
+
+  const newWordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
+
+  database.ref(`games/${currentGameId}`).once("value").then(snapshot => {
+    const game = snapshot.val();
+    const playerCount = game.players.length;
+    const newLiarIndex = Math.floor(Math.random() * playerCount);
+
+    database.ref(`games/${currentGameId}`).update({
+      wordSet: newWordSet,
+      liarIndex: newLiarIndex,
+      votes: {},
+    });
+
+    document.getElementById("wordDisplay").innerText = "";
+    document.getElementById("voteOptions").innerHTML = "";
+    document.getElementById("voteResult").innerText = "";
+    document.getElementById("voteSection").style.display = "none";
+    document.getElementById("resetGame").style.display = "none";
+  });
+});
