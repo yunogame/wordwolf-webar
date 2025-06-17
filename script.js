@@ -1,30 +1,52 @@
-const wordsList = [["りんご", "バナナ"], ["猫", "犬"], ["海", "山"]];
-let currentGameId = null;
-let myIndex = null;
-let myName = null;
-let gameData = null;
+const wordsList = [
+  ["りんご", "バナナ"],
+  ["猫", "犬"],
+  ["海", "山"]
+];
 
-const nameInputSection = document.getElementById("nameInputSection");
-const setupSection = document.getElementById("setup");
-const joinSection = document.getElementById("joinSection");
-const gameSection = document.getElementById("gameSection");
+let currentGameId = null;
+let myPlayerIndex = null;
+let myName = null;
+
+const setupSection = document.getElementById("setupSection");
+const lobbySection = document.getElementById("lobbySection");
+const gameInfoSection = document.getElementById("gameInfoSection");
 const voteSection = document.getElementById("voteSection");
 const resultSection = document.getElementById("resultSection");
-const qrCodeSection = document.getElementById("qrCodeSection");
 
-document.getElementById("enterName").addEventListener("click", () => {
-  const name = document.getElementById("playerNameInput").value.trim();
+const playerNameInput = document.getElementById("playerName");
+const btnSetName = document.getElementById("btnSetName");
+
+const playerCountInput = document.getElementById("playerCount");
+const btnCreateGame = document.getElementById("btnCreateGame");
+
+const inputGameId = document.getElementById("inputGameId");
+const btnJoinGame = document.getElementById("btnJoinGame");
+
+const gameIdDisplay = document.getElementById("gameIdDisplay");
+const qrcodeDiv = document.getElementById("qrcode");
+const btnShowWord = document.getElementById("btnShowWord");
+const wordDisplay = document.getElementById("wordDisplay");
+
+const playerListUL = document.getElementById("playerList");
+const btnStartVote = document.getElementById("btnStartVote");
+const btnReset = document.getElementById("btnReset");
+
+// 名前入力確定
+btnSetName.onclick = () => {
+  const name = playerNameInput.value.trim();
   if (!name) {
     alert("名前を入力してください");
     return;
   }
   myName = name;
-  nameInputSection.style.display = "none";
-  setupSection.style.display = "block";
-});
+  setupSection.style.display = "none";
+  lobbySection.style.display = "block";
+};
 
-document.getElementById("createGame").addEventListener("click", async () => {
-  const playerCount = parseInt(document.getElementById("playerCount").value);
+// ゲーム作成
+btnCreateGame.onclick = async () => {
+  const playerCount = parseInt(playerCountInput.value);
   if (!playerCount || playerCount < 2) {
     alert("2人以上のプレイヤー数を入力してください");
     return;
@@ -41,194 +63,247 @@ document.getElementById("createGame").addEventListener("click", async () => {
     wordSet,
     liarIndex,
     players: [],
-    votes: [],
-    status: "waiting"
+    status: "waiting",
+    votes: {},
+    voteStatus: "not_started"
   });
 
-  joinGame(currentGameId);
-  generateQRCode(currentGameId);
-});
+  await joinGame(currentGameId);
+  showQRCode(currentGameId);
+  lobbySection.style.display = "none";
+  gameInfoSection.style.display = "block";
+  resultSection.style.display = "block";
+  btnReset.style.display = "none";
+  btnStartVote.style.display = "inline-block";
+};
 
-document.getElementById("joinGameBtn").addEventListener("click", () => {
-  const gameId = document.getElementById("joinGameIdInput").value.trim();
-  if (!gameId) {
-    alert("ゲームIDを入力してください");
-    return;
-  }
-  joinGame(gameId);
-});
-
-function joinGame(gameId) {
-  currentGameId = gameId;
-  const playersRef = database.ref(`games/${gameId}/players`);
-
-  playersRef.once("value").then(snapshot => {
-    let players = snapshot.val() || [];
-    myIndex = players.length;
-
-    players.push({name: myName, voted: false});
-    playersRef.set(players).then(() => {
-      nameInputSection.style.display = "none";
-      setupSection.style.display = "none";
-      joinSection.style.display = "block";
-      qrCodeSection.style.display = "none";
-      gameSection.style.display = "none";
-      voteSection.style.display = "none";
-      resultSection.style.display = "none";
-
-      document.getElementById("gameIdDisplay").textContent = currentGameId;
-      document.getElementById("playerNameDisplay").textContent = myName;
-
-      listenGameChanges();
-    });
-  }).catch(() => {
-    alert("ゲームIDが存在しません");
-  });
-}
-
-document.getElementById("showWord").addEventListener("click", () => {
-  if (!currentGameId || myIndex === null) return;
-
-  database.ref(`games/${currentGameId}`).once("value").then(snapshot => {
-    gameData = snapshot.val();
-    if (!gameData) {
-      alert("ゲームデータが見つかりません");
-      return;
-    }
-    const word = myIndex === gameData.liarIndex ? gameData.wordSet[1] : gameData.wordSet[0];
-    document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
-  });
-});
-
-document.getElementById("startVote").addEventListener("click", () => {
-  if (!currentGameId) return;
-  database.ref(`games/${currentGameId}/status`).set("voting");
-});
-
-function listenGameChanges() {
-  const gameRef = database.ref(`games/${currentGameId}`);
-  gameRef.on("value", snapshot => {
-    gameData = snapshot.val();
-    if (!gameData) return;
-
-    // 投票開始になったら投票画面表示
-    if (gameData.status === "voting") {
-      joinSection.style.display = "none";
-      gameSection.style.display = "none";
-      voteSection.style.display = "block";
-      resultSection.style.display = "none";
-
-      showVoteButtons(gameData.players);
-    }
-
-    // 投票結果が揃ったら結果表示
-    if (gameData.status === "finished") {
-      joinSection.style.display = "none";
-      gameSection.style.display = "none";
-      voteSection.style.display = "none";
-      resultSection.style.display = "block";
-
-      showResults();
-    }
-
-    // 投票中のステータスならスタート投票ボタン非表示
-    if (gameData.status === "waiting") {
-      gameSection.style.display = "block";
-      voteSection.style.display = "none";
-      resultSection.style.display = "none";
-    }
-  });
-}
-
-function showVoteButtons(players) {
-  const voteButtonsDiv = document.getElementById("voteButtons");
-  voteButtonsDiv.innerHTML = "";
-  players.forEach((p, index) => {
-    // 自分には投票できない
-    if (index === myIndex) return;
-    const btn = document.createElement("button");
-    btn.textContent = p.name;
-    btn.onclick = () => castVote(index);
-    voteButtonsDiv.appendChild(btn);
-  });
-}
-
-function castVote(voteForIndex) {
-  if (!currentGameId || myIndex === null) return;
-  const voteRef = database.ref(`games/${currentGameId}/votes/${myIndex}`);
-  voteRef.set(voteForIndex).then(() => {
-    alert("投票しました。結果を待ちます。");
-  });
-}
-
-// 結果表示用
-function showResults() {
-  const resultDisplay = document.getElementById("resultDisplay");
-  const players = gameData.players || [];
-  const votes = gameData.votes || [];
-
-  // 各プレイヤーが何票もらったかカウント
-  const voteCounts = Array(players.length).fill(0);
-  votes.forEach(voteForIndex => {
-    if (typeof voteForIndex === "number") {
-      voteCounts[voteForIndex]++;
-    }
-  });
-
-  // 票が最も多いプレイヤーを特定
-  let maxVotes = -1;
-  let maxIndices = [];
-  voteCounts.forEach((count, idx) => {
-    if (count > maxVotes) {
-      maxVotes = count;
-      maxIndices = [idx];
-    } else if (count === maxVotes) {
-      maxIndices.push(idx);
-    }
-  });
-
-  // ウルフが投票で追放されたか判定
-  const wolfIndex = gameData.liarIndex;
-  const wolfVotedOut = maxIndices.includes(wolfIndex);
-
-  // 結果テキスト作成
-  let resultText = "<p>投票結果：</p><ul>";
-  players.forEach((p, idx) => {
-    resultText += `<li>${p.name}: ${voteCounts[idx]}票</li>`;
-  });
-  resultText += "</ul>";
-
-  if (wolfVotedOut) {
-    resultText += `<p>ウルフ「${players[wolfIndex].name}」は追放されました。市民チームの勝利です！</p>`;
-  } else {
-    resultText += `<p>ウルフ「${players[wolfIndex].name}」は逃げ切りました。ウルフの勝利です！</p>`;
-  }
-
-  resultDisplay.innerHTML = resultText;
-}
-
-// リセット処理
-document.getElementById("resetGame").addEventListener("click", () => {
-  if (!currentGameId) return;
-  database.ref(`games/${currentGameId}`).remove().then(() => {
-    alert("ゲームをリセットしました。ページをリロードしてください。");
-  });
-});
-
-// QRコード生成
-function generateQRCode(gameId) {
-  const canvas = document.getElementById("qrCodeCanvas");
-  QRCode.toCanvas(canvas, `${location.origin}${location.pathname}?gameId=${gameId}`, function (error) {
+// QRコード表示
+function showQRCode(gameId) {
+  qrcodeDiv.innerHTML = "";
+  QRCode.toCanvas(qrcodeDiv, window.location.href.split("#")[0] + "#" + gameId, function (error) {
     if (error) console.error(error);
   });
 }
 
-// ページロード時にURLにgameIdがあれば自動参加
-window.addEventListener("load", () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameIdFromUrl = urlParams.get("gameId");
-  if (gameIdFromUrl) {
-    alert(`URLにゲームIDが指定されています: ${gameIdFromUrl} 先に名前を入力してから参加ボタンを押してください。`);
-    document.getElementById("joinGameIdInput").value = gameIdFromUrl;
+// ゲーム参加
+btnJoinGame.onclick = async () => {
+  const gameId = inputGameId.value.trim();
+  if (!gameId) {
+    alert("ゲームIDを入力してください");
+    return;
   }
-});
+  const gameRef = database.ref(`games/${gameId}`);
+  const snapshot = await gameRef.once("value");
+  if (!snapshot.exists()) {
+    alert("そのゲームIDは存在しません");
+    return;
+  }
+  await joinGame(gameId);
+  lobbySection.style.display = "none";
+  gameInfoSection.style.display = "block";
+  resultSection.style.display = "block";
+};
+
+// ゲーム参加の処理
+async function joinGame(gameId) {
+  currentGameId = gameId;
+
+  const playerRef = database.ref(`games/${gameId}/players`);
+  const snapshot = await playerRef.once("value");
+  const players = snapshot.val() || [];
+
+  // 重複名前チェックは無し（シンプルに）
+  myPlayerIndex = players.length;
+  players.push({ name: myName, votedFor: null });
+  await playerRef.set(players);
+
+  gameIdDisplay.textContent = gameId;
+
+  // リアルタイムで状態監視開始
+  listenGameUpdates();
+  listenVotesUpdates();
+
+  updatePlayerList(players);
+  wordDisplay.innerText = "";
+  btnShowWord.disabled = false;
+  voteSection.style.display = "none";
+  btnReset.style.display = "none";
+  btnStartVote.style.display = "inline-block";
+}
+
+// お題表示
+btnShowWord.onclick = async () => {
+  if (!currentGameId || myPlayerIndex === null) return;
+
+  const gameSnapshot = await database.ref(`games/${currentGameId}`).once("value");
+  const gameData = gameSnapshot.val();
+
+  if (!gameData) return;
+
+  const word = (myPlayerIndex === gameData.liarIndex) ? gameData.wordSet[1] : gameData.wordSet[0];
+  wordDisplay.innerText = `あなたのお題: ${word}`;
+  btnShowWord.disabled = true;
+  voteSection.style.display = "block";
+  populateVoteList(gameData.players);
+};
+
+// プレイヤーリスト更新
+function updatePlayerList(players) {
+  playerListUL.innerHTML = "";
+  players.forEach((p, idx) => {
+    if (idx === myPlayerIndex) return; // 自分は投票できない
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.textContent = p.name;
+    btn.onclick = () => castVote(idx);
+    li.appendChild(btn);
+    playerListUL.appendChild(li);
+  });
+}
+
+// 投票リスト初期化
+function populateVoteList(players) {
+  updatePlayerList(players);
+}
+
+// 投票する
+async function castVote(votedIndex) {
+  if (!currentGameId || myPlayerIndex === null) return;
+  const votePath = `games/${currentGameId}/votes/${myPlayerIndex}`;
+  await database.ref(votePath).set(votedIndex);
+  alert(`「${document.querySelectorAll("#playerList button")[votedIndex > myPlayerIndex ? votedIndex-1 : votedIndex].textContent}」に投票しました`);
+}
+
+// 投票開始ボタン（ホスト用）
+btnStartVote.onclick = async () => {
+  if (!currentGameId) return;
+
+  const gameRef = database.ref(`games/${currentGameId}`);
+  const snapshot = await gameRef.once("value");
+  const data = snapshot.val();
+  if (!data) return;
+
+  if (myPlayerIndex !== 0) {
+    alert("投票開始はゲーム作成者のみ可能です");
+    return;
+  }
+
+  if (data.voteStatus === "started") {
+    alert("投票は既に開始しています");
+    return;
+  }
+
+  await gameRef.update({ voteStatus: "started" });
+  btnStartVote.style.display = "none";
+  btnReset.style.display = "inline-block";
+};
+
+// 投票状態監視
+function listenVotesUpdates() {
+  if (!currentGameId) return;
+
+  const votesRef = database.ref(`games/${currentGameId}/votes`);
+  votesRef.on("value", async (snapshot) => {
+    const votes = snapshot.val() || {};
+
+    // 全員投票したか？
+    const gameRef = database.ref(`games/${currentGameId}`);
+    const gameSnap = await gameRef.once("value");
+    const gameData = gameSnap.val();
+    if (!gameData) return;
+
+    const totalPlayers = gameData.playerCount;
+    const votedCount = Object.keys(votes).length;
+
+    if (gameData.voteStatus !== "started") return;
+
+    if (votedCount < totalPlayers) {
+      // 投票途中 → 投票ボタンを無効にして待機状態を伝える
+      voteSection.querySelectorAll("button").forEach(btn => btn.disabled = true);
+      wordDisplay.innerText = "全員の投票を待っています...";
+      return;
+    }
+
+    // 全員投票完了 → 勝敗判定
+    voteSection.querySelectorAll("button").forEach(btn => btn.disabled = true);
+
+    // 勝敗判定ロジック
+    const voteCounts = {};
+    Object.values(votes).forEach(v => {
+      voteCounts[v] = (voteCounts[v] || 0) + 1;
+    });
+
+    // 最も票数の多いプレイヤーを探す（同票の時は一番最初）
+    let maxVotes = 0;
+    let eliminatedIndex = null;
+    for (const [key, val] of Object.entries(voteCounts)) {
+      if (val > maxVotes) {
+        maxVotes = val;
+        eliminatedIndex = Number(key);
+      }
+    }
+
+    const liarIndex = gameData.liarIndex;
+    const eliminatedIsLiar = (eliminatedIndex === liarIndex);
+
+    alert(
+      `投票結果発表！\n` +
+      `最多票を集めたのは「${gameData.players[eliminatedIndex].name}」さん\n` +
+      (eliminatedIsLiar ? "ウルフは倒されました！市民の勝利！" : "ウルフは倒せませんでした…ウルフの勝利！")
+    );
+
+    btnReset.style.display = "inline-block";
+  });
+}
+
+// ゲーム情報更新監視（プレイヤーの追加など）
+function listenGameUpdates() {
+  if (!currentGameId) return;
+
+  const gameRef = database.ref(`games/${currentGameId}`);
+  gameRef.on("value", (snapshot) => {
+    const gameData = snapshot.val();
+    if (!gameData) return;
+
+    updatePlayerList(gameData.players || []);
+  });
+}
+
+// リセット（再プレイ）
+btnReset.onclick = async () => {
+  if (!currentGameId) return;
+
+  const gameRef = database.ref(`games/${currentGameId}`);
+  const snapshot = await gameRef.once("value");
+  const data = snapshot.val();
+  if (!data) return;
+
+  if (myPlayerIndex !== 0) {
+    alert("リセットはゲーム作成者のみ可能です");
+    return;
+  }
+
+  // 新しいワードセットとウルフ決定
+  const wordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
+  const liarIndex = Math.floor(Math.random() * data.playerCount);
+
+  await gameRef.update({
+    wordSet,
+    liarIndex,
+    votes: {},
+    voteStatus: "not_started"
+  });
+
+  // 参加者の投票データリセット
+  const playersRef = database.ref(`games/${currentGameId}/players`);
+  const playersSnapshot = await playersRef.once("value");
+  const players = playersSnapshot.val() || [];
+  const resetPlayers = players.map(p => ({ name: p.name, votedFor: null }));
+  await playersRef.set(resetPlayers);
+
+  wordDisplay.innerText = "";
+  btnShowWord.disabled = false;
+  voteSection.style.display = "none";
+  btnReset.style.display = "none";
+  btnStartVote.style.display = "inline-block";
+};
