@@ -1,39 +1,28 @@
 const wordsList = [["りんご", "バナナ"], ["猫", "犬"], ["海", "山"]];
 let currentGameId = null;
 let myIndex = null;
-let myName = null;
-let gameListener = null;
+let myName = "";
+let playerCount = 0;
 
-// プレイヤー名決定後
+// 名前入力完了
 document.getElementById("enterName").addEventListener("click", () => {
-  const nameInput = document.getElementById("playerNameInput").value.trim();
-  if (!nameInput) {
-    alert("名前を入力してください");
-    return;
-  }
-  myName = nameInput;
-
-  const params = new URLSearchParams(window.location.search);
-  const gameId = params.get("gameId");
-
+  const name = document.getElementById("playerNameInput").value.trim();
+  if (!name) return alert("名前を入力してください");
+  myName = name;
   document.getElementById("nameInputSection").style.display = "none";
+  document.getElementById("setup").style.display = "block";
 
-  if (gameId) {
-    joinGame(gameId); // QR参加時
-  } else {
-    document.getElementById("setup").style.display = "block"; // 自分で部屋を作る
-  }
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get("gameId");
+  if (gameId) joinGame(gameId); // QRから遷移した場合
 });
 
 // ゲーム作成
 document.getElementById("createGame").addEventListener("click", async () => {
-  const playerCount = parseInt(document.getElementById("playerCount").value);
-  if (!playerCount || playerCount < 2) {
-    alert("2人以上のプレイヤー数を入力してください");
-    return;
-  }
+  playerCount = parseInt(document.getElementById("playerCount").value);
+  if (playerCount < 2) return alert("2人以上のプレイヤー数を入力してください");
 
-  const newGameRef = database.ref("games").push();
+  const newGameRef = firebase.database().ref("games").push();
   currentGameId = newGameRef.key;
 
   const wordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
@@ -44,48 +33,48 @@ document.getElementById("createGame").addEventListener("click", async () => {
     wordSet,
     liarIndex,
     players: [],
-    status: "waiting",
-    votes: {}
+    votes: {},
+    status: "waiting"
+  });
+
+  const qrUrl = `${location.origin}${location.pathname}?gameId=${currentGameId}`;
+  document.getElementById("gameIdDisplay").textContent = currentGameId;
+  QRCode.toCanvas(document.createElement("canvas"), qrUrl, (err, canvas) => {
+    if (!err) document.getElementById("qrCodeContainer").appendChild(canvas);
   });
 
   joinGame(currentGameId);
-  showQRCode(currentGameId);
 });
 
 // ゲーム参加処理
 function joinGame(gameId) {
   currentGameId = gameId;
-  const playerRef = database.ref(`games/${gameId}/players`);
+  const gameRef = firebase.database().ref(`games/${gameId}`);
 
-  playerRef.once("value").then(snapshot => {
-    const players = snapshot.val() || [];
-    myIndex = players.length;
-    players.push(myName);
-    playerRef.set(players).then(() => {
-      listenGameUpdates(gameId);
+  gameRef.once("value").then(snapshot => {
+    const data = snapshot.val();
+    if (!data) return alert("ゲームが存在しません");
+    playerCount = data.playerCount;
+
+    const playerRef = gameRef.child("players");
+    playerRef.once("value").then(pSnap => {
+      const players = pSnap.val() || [];
+      myIndex = players.length;
+      players.push(myName);
+      playerRef.set(players);
     });
-  });
 
-  document.getElementById("setup").style.display = "none";
-  document.getElementById("joinSection").style.display = "block";
-  document.getElementById("gameIdDisplay").textContent = gameId;
-}
-
-// QRコード生成
-function showQRCode(gameId) {
-  const url = `${location.origin}${location.pathname}?gameId=${gameId}`;
-  const qrContainer = document.getElementById("qrCodeContainer");
-  qrContainer.innerHTML = "";
-  QRCode.toCanvas(document.createElement("canvas"), url, { width: 200 }, (err, canvas) => {
-    if (!err) qrContainer.appendChild(canvas);
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("joinSection").style.display = "block";
+    document.getElementById("gameIdDisplay").textContent = gameId;
   });
 }
 
-// お題を見る
+// お題表示
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
-  database.ref(`games/${currentGameId}`).once("value").then(snapshot => {
+  firebase.database().ref(`games/${currentGameId}`).once("value").then(snapshot => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
     document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
@@ -94,98 +83,74 @@ document.getElementById("showWord").addEventListener("click", () => {
 
 // 投票開始
 document.getElementById("startVote").addEventListener("click", () => {
-  if (!currentGameId) return;
+  document.getElementById("voteSection").style.display = "block";
 
   const voteOptions = document.getElementById("voteOptions");
   voteOptions.innerHTML = "";
 
-  database.ref(`games/${currentGameId}/players`).once("value").then(snapshot => {
-    const players = snapshot.val();
-    players.forEach((name, index) => {
+  firebase.database().ref(`games/${currentGameId}/players`).once("value").then(snapshot => {
+    const names = snapshot.val() || [];
+    names.forEach((name, index) => {
       const btn = document.createElement("button");
-      btn.innerText = name;
-      btn.addEventListener("click", () => castVote(index));
+      btn.textContent = name;
+      btn.onclick = () => {
+        firebase.database().ref(`games/${currentGameId}/votes/${myIndex}`).set(index);
+        document.getElementById("voteSection").innerHTML = "投票が完了しました。結果を待っています...";
+      };
       voteOptions.appendChild(btn);
     });
   });
-
-  document.getElementById("voteSection").style.display = "block";
 });
 
-// 投票処理
-function castVote(targetIndex) {
-  if (!currentGameId || myIndex === null) return;
-  database.ref(`games/${currentGameId}/votes/${myIndex}`).set(targetIndex);
-}
+// 勝敗判定（全員投票完了時）
+firebase.database().ref().child("games").on("child_changed", (snapshot) => {
+  const data = snapshot.val();
+  if (snapshot.key !== currentGameId) return;
 
-// 勝敗判定とリスナー
-function listenGameUpdates(gameId) {
-  if (gameListener) gameListener.off();
+  const votes = data.votes || {};
+  if (Object.keys(votes).length < data.playerCount) return;
 
-  const gameRef = database.ref(`games/${gameId}`);
-  gameListener = gameRef.on("value", snapshot => {
-    const game = snapshot.val();
-    if (!game || !game.votes) {
-      document.getElementById("voteResult").innerText = "";
-      return;
-    }
+  // すでに結果表示済みならスキップ
+  if (data.status === "done") return;
 
-    const voteCounts = {};
-    const players = game.players || [];
-
-    Object.values(game.votes).forEach(v => {
-      voteCounts[v] = (voteCounts[v] || 0) + 1;
-    });
-
-    const results = Object.entries(voteCounts)
-      .map(([index, count]) => `${players[index]}: ${count}票`)
-      .join("\n");
-
-    document.getElementById("voteResult").innerText = results;
-
-    if (Object.keys(game.votes).length === players.length) {
-      let maxVotes = 0;
-      let topIndex = null;
-      for (const [index, count] of Object.entries(voteCounts)) {
-        if (count > maxVotes) {
-          maxVotes = count;
-          topIndex = parseInt(index);
-        }
-      }
-
-      if (topIndex === game.liarIndex) {
-        alert(`🎉 ウルフは ${players[topIndex]} でした！市民の勝ち！`);
-      } else {
-        alert(`😈 ウルフは ${players[game.liarIndex]} でした…ウルフの勝ち！`);
-      }
-
-      // 再プレイボタン表示
-      document.getElementById("resetGame").style.display = "block";
-    }
+  const voteCount = {};
+  Object.values(votes).forEach(index => {
+    voteCount[index] = (voteCount[index] || 0) + 1;
   });
-}
 
-// 再プレイ処理
+  // 最大得票者（複数可）
+  const maxVotes = Math.max(...Object.values(voteCount));
+  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
+  const isLiarFound = topVoted.includes(String(data.liarIndex));
+
+  const players = data.players || [];
+  const resultText = isLiarFound
+    ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
+    : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
+
+  // 結果をアラートで全員に表示
+  alert(resultText);
+
+  // 結果表示済みとフラグを記録
+  firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
+
+  // 投票結果表示
+  let resultStr = "";
+  Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
+    resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
+  });
+  document.getElementById("voteResult").textContent = resultStr;
+
+  document.getElementById("resetGame").style.display = "inline-block";
+});
+
+// リセット
 document.getElementById("resetGame").addEventListener("click", () => {
-  if (!currentGameId) return;
-
-  const newWordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
-
-  database.ref(`games/${currentGameId}`).once("value").then(snapshot => {
-    const game = snapshot.val();
-    const playerCount = game.players.length;
-    const newLiarIndex = Math.floor(Math.random() * playerCount);
-
-    database.ref(`games/${currentGameId}`).update({
-      wordSet: newWordSet,
-      liarIndex: newLiarIndex,
-      votes: {},
-    });
-
-    document.getElementById("wordDisplay").innerText = "";
-    document.getElementById("voteOptions").innerHTML = "";
-    document.getElementById("voteResult").innerText = "";
-    document.getElementById("voteSection").style.display = "none";
-    document.getElementById("resetGame").style.display = "none";
+  firebase.database().ref(`games/${currentGameId}`).update({
+    votes: {},
+    status: "waiting"
   });
+  document.getElementById("voteSection").style.display = "none";
+  document.getElementById("voteResult").textContent = "";
+  document.getElementById("resetGame").style.display = "none";
 });
