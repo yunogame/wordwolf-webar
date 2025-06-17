@@ -2,10 +2,10 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf v1.52</title>
+  <title>WordWolf v1.53</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script src="firebase-config.js"></script>
   <script src="script.js" defer></script>
   <style>
@@ -15,22 +15,21 @@
   </style>
 </head>
 <body>
-  <h1>WordWolf v1.52</h1>
+  <h1>WordWolf v1.53</h1>
 
-  <!-- 名前入力 -->
   <div id="nameInputSection">
     <p>プレイヤー名: <input type="text" id="playerNameInput" /></p>
     <button id="enterName">決定</button>
   </div>
 
-  <!-- ゲーム作成 -->
   <div id="setup">
     <label>参加人数: <input type="number" id="playerCount" min="2" value="4" /></label>
     <button id="createGame">ゲーム作成</button>
+    <p>このQRコードを他のプレイヤーに見せてください:</p>
     <div id="qrCodeContainer"></div>
+    <p id="joinUrlText"></p>
   </div>
 
-  <!-- ゲーム参加 -->
   <div id="joinSection">
     <p>ゲームID: <span id="gameIdDisplay"></span></p>
     <button id="showWord">お題を見る</button>
@@ -38,14 +37,12 @@
     <button id="startVote">投票を始める</button>
   </div>
 
-  <!-- 投票 -->
   <div id="voteSection">
     <h3>誰がウルフ？</h3>
     <div id="voteOptions"></div>
     <pre id="voteResult"></pre>
   </div>
 
-  <!-- リセット -->
   <button id="resetGame">もう一度プレイ</button>
 </body>
 </html>
