@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf v1.51.4</title>
+  <title>WordWolf v1.51.5</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -25,12 +25,12 @@
       display: inline-block;
     }
     #qrCodeContainer {
-      margin-top: 20px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>WordWolf v1.51.4</h1>
+  <h1>WordWolf v1.51.5</h1>
 
   <!-- 名前入力 -->
   <div id="nameInputSection">
@@ -45,12 +45,15 @@
       <input type="number" id="playerCount" min="2" value="4" />
     </label>
     <button id="createGame">ゲーム作成</button>
-    <div id="qrCodeContainer"></div>
   </div>
 
   <!-- ゲーム参加後の表示 -->
   <div id="joinSection" style="display: none;">
     <p>ゲームID: <span id="gameIdDisplay"></span></p>
+
+    <!-- QRコード常に表示 -->
+    <div id="qrCodeContainer"></div>
+
     <button id="showWord">お題を見る</button>
     <p id="wordDisplay"></p>
 
