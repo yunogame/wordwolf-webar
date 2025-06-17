@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf v1.53</title>
+  <title>WordWolf v1.54</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -10,12 +10,17 @@
   <script src="script.js" defer></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #setup, #joinSection, #voteSection, #resetGame, #qrCodeContainer { display: none; margin-top: 20px; }
+    #setup, #joinSection, #voteSection, #resetGame, #qrCodeContainer, #nameInputSection {
+      margin-top: 20px;
+    }
+    #setup, #joinSection, #voteSection, #resetGame, #qrCodeContainer {
+      display: none;
+    }
     button { margin: 5px; padding: 10px 20px; }
   </style>
 </head>
 <body>
-  <h1>WordWolf v1.53</h1>
+  <h1>WordWolf v1.54</h1>
 
   <div id="nameInputSection">
     <p>プレイヤー名: <input type="text" id="playerNameInput" /></p>
@@ -40,7 +45,6 @@
   <div id="voteSection">
     <h3>誰がウルフ？</h3>
     <div id="voteOptions"></div>
-    <pre id="voteResult"></pre>
   </div>
 
   <button id="resetGame">もう一度プレイ</button>
