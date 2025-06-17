@@ -2,44 +2,73 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf WebAR1.44</title>
+  <title>WordWolf v1.5</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="firebase-config.js"></script>
   <script src="script.js" defer></script>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #setup, #joinSection, #voteSection { display: none; }
-    #voteOptions button { margin: 5px; }
-    pre { white-space: pre-wrap; text-align: left; max-width: 300px; margin: 10px auto; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #setup, #joinSection, #nameInputSection, #voteSection {
+      margin-top: 20px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+    }
+    #voteOptions button {
+      display: inline-block;
+    }
+    #qrCodeContainer {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
-  <h1>WordWolf1.44</h1>
+  <h1>WordWolf v1.5</h1>
 
+  <!-- 名前入力 -->
   <div id="nameInputSection">
-    <label>プレイヤー名: <input type="text" id="playerNameInput" /></label>
+    <p>プレイヤー名を入力してください:</p>
+    <input type="text" id="playerNameInput" />
     <button id="enterName">決定</button>
   </div>
 
-  <div id="setup">
-    <label>参加人数: <input type="number" id="playerCount" min="2" value="4" /></label>
+  <!-- ゲーム作成 -->
+  <div id="setup" style="display: none;">
+    <label>参加人数:
+      <input type="number" id="playerCount" min="2" value="4" />
+    </label>
     <button id="createGame">ゲーム作成</button>
+    <div id="qrCodeContainer"></div>
   </div>
 
-  <div id="joinSection">
+  <!-- ゲーム参加後の表示 -->
+  <div id="joinSection" style="display: none;">
     <p>ゲームID: <span id="gameIdDisplay"></span></p>
-    <div id="qrCodeContainer"></div>
     <button id="showWord">お題を見る</button>
     <p id="wordDisplay"></p>
-    <button id="startVote">投票を開始</button>
-  </div>
 
-  <div id="voteSection">
-    <h3>投票してください</h3>
-    <div id="voteOptions"></div>
-    <pre id="voteResult"></pre>
+    <hr>
+
+    <button id="startVote">投票を始める</button>
+
+    <div id="voteSection" style="display: none;">
+      <h3>投票してください:</h3>
+      <div id="voteOptions"></div>
+    </div>
+
+    <div>
+      <h3>投票結果:</h3>
+      <pre id="voteResult"></pre>
+    </div>
+
+    <button id="resetGame" style="display: none;">もう一度プレイ</button>
   </div>
 </body>
 </html>
