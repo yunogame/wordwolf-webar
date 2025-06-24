@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf v1.61</title>
+  <title>WordWolf v1.51</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -27,15 +27,29 @@
     #qrCodeContainer {
       margin-top: 10px;
     }
+    #timerContainer {
+      width: 80%;
+      margin: 10px auto;
+      height: 25px;
+      background: #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+    }
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      background: red;
+      transition: width 1s linear;
+    }
     #discussionTimer {
       font-size: 24px;
       color: red;
-      margin: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>WordWolf v1.61</h1>
+  <h1>WordWolf v1.51</h1>
 
   <!-- 名前入力 -->
   <div id="nameInputSection">
@@ -60,7 +74,10 @@
     <button id="showWord">お題を見る</button>
     <p id="wordDisplay"></p>
 
-    <!-- 議論タイマー -->
+    <!-- 可視化タイマー -->
+    <div id="timerContainer">
+      <div id="timerBar"></div>
+    </div>
     <p id="discussionTimer"></p>
 
     <hr>
