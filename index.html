@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>WordWolf v1.60</title>
+  <title>WordWolf v1.61</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -27,10 +27,15 @@
     #qrCodeContainer {
       margin-top: 10px;
     }
+    #discussionTimer {
+      font-size: 24px;
+      color: red;
+      margin: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>WordWolf v1.60</h1>
+  <h1>WordWolf v1.61</h1>
 
   <!-- 名前入力 -->
   <div id="nameInputSection">
@@ -50,12 +55,13 @@
   <!-- ゲーム参加後の表示 -->
   <div id="joinSection" style="display: none;">
     <p>ゲームID: <span id="gameIdDisplay"></span></p>
-
-    <!-- QRコード常に表示 -->
     <div id="qrCodeContainer"></div>
 
     <button id="showWord">お題を見る</button>
     <p id="wordDisplay"></p>
+
+    <!-- 議論タイマー -->
+    <p id="discussionTimer"></p>
 
     <hr>
 
