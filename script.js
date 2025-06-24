@@ -4,6 +4,7 @@ let myIndex = null;
 let myName = "";
 let playerCount = 0;
 
+
 // 名前入力完了
 document.getElementById("enterName").addEventListener("click", () => {
   const name = document.getElementById("playerNameInput").value.trim();
