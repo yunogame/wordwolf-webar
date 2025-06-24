@@ -68,27 +68,30 @@ function joinGame(gameId) {
       const players = pSnap.val() || [];
       myIndex = players.length;
       players.push(myName);
-      playerRef.set(players);
-    });
 
-    document.getElementById("setup").style.display = "none";
-    document.getElementById("joinSection").style.display = "block";
-    document.getElementById("gameIdDisplay").textContent = gameId;
+      // プレイヤー追加完了後に残り処理を実行
+      playerRef.set(players).then(() => {
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("joinSection").style.display = "block";
+        document.getElementById("gameIdDisplay").textContent = gameId;
 
-    // 🔍 全員参加チェック（ホスト用）
-    firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
-      const players = snapshot.val() || [];
-      const showBtn = document.getElementById("showWord");
-      if (players.length === playerCount) {
-        showBtn.disabled = false;
-        showBtn.textContent = "お題を見る";
-      } else {
-        showBtn.disabled = true;
-        showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
-      }
+        // 全員参加監視（ホストも含む）
+        firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
+          const players = snapshot.val() || [];
+          const showBtn = document.getElementById("showWord");
+          if (players.length === playerCount) {
+            showBtn.disabled = false;
+            showBtn.textContent = "お題を見る";
+          } else {
+            showBtn.disabled = true;
+            showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
+          }
+        });
+      });
     });
   });
 }
+
 
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
