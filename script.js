@@ -4,7 +4,6 @@ let myIndex = null;
 let myName = "";
 let playerCount = 0;
 
-
 // 名前入力完了
 document.getElementById("enterName").addEventListener("click", () => {
   const name = document.getElementById("playerNameInput").value.trim();
@@ -53,10 +52,7 @@ document.getElementById("createGame").addEventListener("click", async () => {
     container.innerHTML = "";
     container.appendChild(canvas);
 
-    // 表示が終わってから参加処理を呼び出す
-    setTimeout(() => {
-      joinGame(currentGameId);
-    }, 300); // 表示の安定を確保
+    joinGame(currentGameId);
   });
 });
 
@@ -84,7 +80,7 @@ function joinGame(gameId) {
   });
 }
 
-// お題表示
+// お題表示＋議論タイマー
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -92,6 +88,21 @@ document.getElementById("showWord").addEventListener("click", () => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
     document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
+
+    // 議論タイマー開始（60秒）
+    let timeLeft = 60;
+    const timerDisplay = document.getElementById("discussionTimer");
+    timerDisplay.textContent = `議論タイム: ${timeLeft} 秒`;
+
+    const intervalId = setInterval(() => {
+      timeLeft--;
+      timerDisplay.textContent = `議論タイム: ${timeLeft} 秒`;
+      if (timeLeft <= 0) {
+        clearInterval(intervalId);
+        timerDisplay.textContent = "議論終了！投票に移ります。";
+        document.getElementById("startVote").click(); // 自動で投票開始
+      }
+    }, 1000);
   });
 });
 
@@ -116,7 +127,7 @@ document.getElementById("startVote").addEventListener("click", () => {
   });
 });
 
-// 勝敗判定（全員投票完了時）
+// 勝敗判定
 firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   const data = snapshot.val();
   if (snapshot.key !== currentGameId) return;
@@ -124,7 +135,6 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   const votes = data.votes || {};
   if (Object.keys(votes).length < data.playerCount) return;
 
-  // すでに結果表示済みならスキップ
   if (data.status === "done") return;
 
   const voteCount = {};
@@ -132,7 +142,6 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
     voteCount[index] = (voteCount[index] || 0) + 1;
   });
 
-  // 最大得票者（複数可）
   const maxVotes = Math.max(...Object.values(voteCount));
   const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
   const isLiarFound = topVoted.includes(String(data.liarIndex));
@@ -142,13 +151,10 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
     ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
     : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
 
-  // 結果をアラートで全員に表示
   alert(resultText);
 
-  // 結果表示済みとフラグを記録
   firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
 
-  // 投票結果表示
   let resultStr = "";
   Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
     resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
@@ -167,4 +173,6 @@ document.getElementById("resetGame").addEventListener("click", () => {
   document.getElementById("voteSection").style.display = "none";
   document.getElementById("voteResult").textContent = "";
   document.getElementById("resetGame").style.display = "none";
+  document.getElementById("discussionTimer").textContent = "";
+  document.getElementById("wordDisplay").textContent = "";
 });
