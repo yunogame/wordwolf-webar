@@ -4,7 +4,6 @@ let myIndex = null;
 let myName = "";
 let playerCount = 0;
 
-// 名前入力完了
 document.getElementById("enterName").addEventListener("click", () => {
   const name = document.getElementById("playerNameInput").value.trim();
   if (!name) return alert("名前を入力してください");
@@ -14,10 +13,9 @@ document.getElementById("enterName").addEventListener("click", () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get("gameId");
-  if (gameId) joinGame(gameId); // QRから遷移した場合
+  if (gameId) joinGame(gameId);
 });
 
-// ゲーム作成
 document.getElementById("createGame").addEventListener("click", async () => {
   playerCount = parseInt(document.getElementById("playerCount").value);
   if (playerCount < 2) return alert("2人以上のプレイヤー数を入力してください");
@@ -56,7 +54,6 @@ document.getElementById("createGame").addEventListener("click", async () => {
   });
 });
 
-// ゲーム参加処理
 function joinGame(gameId) {
   currentGameId = gameId;
   const gameRef = firebase.database().ref(`games/${gameId}`);
@@ -80,7 +77,7 @@ function joinGame(gameId) {
   });
 }
 
-// お題表示＋議論タイマー
+// タイマー付きお題表示
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -89,24 +86,34 @@ document.getElementById("showWord").addEventListener("click", () => {
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
     document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
 
-    // 議論タイマー開始（60秒）
-    let timeLeft = 60;
+    // タイマー表示
     const timerDisplay = document.getElementById("discussionTimer");
+    const timerContainer = document.getElementById("timerContainer");
+    const timerBar = document.getElementById("timerBar");
+
+    timerContainer.style.display = "block";
+    let timeLeft = 60;
+    const total = 60;
+
     timerDisplay.textContent = `議論タイム: ${timeLeft} 秒`;
+    timerBar.style.width = "100%";
 
     const intervalId = setInterval(() => {
       timeLeft--;
+      const percent = (timeLeft / total) * 100;
       timerDisplay.textContent = `議論タイム: ${timeLeft} 秒`;
+      timerBar.style.width = `${percent}%`;
+
       if (timeLeft <= 0) {
         clearInterval(intervalId);
         timerDisplay.textContent = "議論終了！投票に移ります。";
-        document.getElementById("startVote").click(); // 自動で投票開始
+        timerBar.style.width = `0%`;
+        document.getElementById("startVote").click();
       }
     }, 1000);
   });
 });
 
-// 投票開始
 document.getElementById("startVote").addEventListener("click", () => {
   document.getElementById("voteSection").style.display = "block";
 
@@ -127,14 +134,12 @@ document.getElementById("startVote").addEventListener("click", () => {
   });
 });
 
-// 勝敗判定
 firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   const data = snapshot.val();
   if (snapshot.key !== currentGameId) return;
 
   const votes = data.votes || {};
   if (Object.keys(votes).length < data.playerCount) return;
-
   if (data.status === "done") return;
 
   const voteCount = {};
@@ -164,7 +169,6 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   document.getElementById("resetGame").style.display = "inline-block";
 });
 
-// リセット
 document.getElementById("resetGame").addEventListener("click", () => {
   firebase.database().ref(`games/${currentGameId}`).update({
     votes: {},
@@ -175,4 +179,6 @@ document.getElementById("resetGame").addEventListener("click", () => {
   document.getElementById("resetGame").style.display = "none";
   document.getElementById("discussionTimer").textContent = "";
   document.getElementById("wordDisplay").textContent = "";
+  document.getElementById("timerBar").style.width = "100%";
+  document.getElementById("timerContainer").style.display = "none";
 });
