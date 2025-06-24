@@ -74,10 +74,22 @@ function joinGame(gameId) {
     document.getElementById("setup").style.display = "none";
     document.getElementById("joinSection").style.display = "block";
     document.getElementById("gameIdDisplay").textContent = gameId;
+
+    // 🔍 全員参加チェック（ホスト用）
+    firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
+      const players = snapshot.val() || [];
+      const showBtn = document.getElementById("showWord");
+      if (players.length === playerCount) {
+        showBtn.disabled = false;
+        showBtn.textContent = "お題を見る";
+      } else {
+        showBtn.disabled = true;
+        showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
+      }
+    });
   });
 }
 
-// タイマー付きお題表示
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -86,7 +98,6 @@ document.getElementById("showWord").addEventListener("click", () => {
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
     document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
 
-    // タイマー表示
     const timerDisplay = document.getElementById("discussionTimer");
     const timerContainer = document.getElementById("timerContainer");
     const timerBar = document.getElementById("timerBar");
