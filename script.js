@@ -69,11 +69,13 @@ function joinGame(gameId) {
       myIndex = players.length;
       players.push(myName);
 
+      // プレイヤー追加完了後に残り処理を実行
       playerRef.set(players).then(() => {
         document.getElementById("setup").style.display = "none";
         document.getElementById("joinSection").style.display = "block";
         document.getElementById("gameIdDisplay").textContent = gameId;
 
+        // 全員参加監視（ホストも含む）
         firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
           const players = snapshot.val() || [];
           const showBtn = document.getElementById("showWord");
@@ -88,51 +90,41 @@ function joinGame(gameId) {
       });
     });
   });
-
-  // 🔄 議論タイマーを同期してスタート
-  firebase.database().ref(`games/${gameId}/discussionStartTime`).on("value", snapshot => {
-    const startTime = snapshot.val();
-    if (!startTime) return;
-
-    firebase.database().ref(`games/${gameId}`).once("value").then(snapshot => {
-      const data = snapshot.val();
-      const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
-      document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
-
-      const timerDisplay = document.getElementById("discussionTimer");
-      const timerContainer = document.getElementById("timerContainer");
-      const timerBar = document.getElementById("timerBar");
-
-      timerContainer.style.display = "block";
-      const total = 60 * 1000;
-      const endTime = startTime + total;
-
-      const intervalId = setInterval(() => {
-        const now = Date.now();
-        const timeLeftMs = endTime - now;
-        const timeLeftSec = Math.max(0, Math.ceil(timeLeftMs / 1000));
-        const percent = Math.max(0, (timeLeftMs / total) * 100);
-
-        timerDisplay.textContent = `議論タイム: ${timeLeftSec} 秒`;
-        timerBar.style.width = `${percent}%`;
-
-        if (timeLeftMs <= 0) {
-          clearInterval(intervalId);
-          timerDisplay.textContent = "議論終了！投票に移ります。";
-          timerBar.style.width = `0%`;
-          document.getElementById("startVote").click();
-        }
-      }, 1000);
-    });
-  });
 }
+
 
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
-  const startTime = Date.now();
-  firebase.database().ref(`games/${currentGameId}`).update({
-    discussionStartTime: startTime
+  firebase.database().ref(`games/${currentGameId}`).once("value").then(snapshot => {
+    const data = snapshot.val();
+    const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
+    document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
+
+    const timerDisplay = document.getElementById("discussionTimer");
+    const timerContainer = document.getElementById("timerContainer");
+    const timerBar = document.getElementById("timerBar");
+
+    timerContainer.style.display = "block";
+    let timeLeft = 60;
+    const total = 60;
+
+    timerDisplay.textContent = `議論タイム: ${timeLeft} 秒`;
+    timerBar.style.width = "100%";
+
+    const intervalId = setInterval(() => {
+      timeLeft--;
+      const percent = (timeLeft / total) * 100;
+      timerDisplay.textContent = `議論タイム: ${timeLeft} 秒`;
+      timerBar.style.width = `${percent}%`;
+
+      if (timeLeft <= 0) {
+        clearInterval(intervalId);
+        timerDisplay.textContent = "議論終了！投票に移ります。";
+        timerBar.style.width = `0%`;
+        document.getElementById("startVote").click();
+      }
+    }, 1000);
   });
 });
 
@@ -194,8 +186,7 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
 document.getElementById("resetGame").addEventListener("click", () => {
   firebase.database().ref(`games/${currentGameId}`).update({
     votes: {},
-    status: "waiting",
-    discussionStartTime: null
+    status: "waiting"
   });
   document.getElementById("voteSection").style.display = "none";
   document.getElementById("voteResult").textContent = "";
