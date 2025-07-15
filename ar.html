@@ -1,54 +1,70 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>AR Test Fixed</title>
+<head>
+  <meta charset="utf-8" />
+  <title>WordWolf AR</title>
 
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <!-- A-FrameとMindAR -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
 
-    <!-- ✅ MindAR core + A-Frame plugin（この2つが必要） -->
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #loadingText {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5em;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="loadingText">カメラ起動中...</div>
 
-    <style>
-      body, html {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-      }
-      #loadingText {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.5em;
-        background: white;
-        padding: 10px;
-        border-radius: 8px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="loadingText">カメラ起動中...</div>
+  <a-scene
+    mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
+    embedded
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: true"
+    loading-screen="enabled: false"
+  >
+    <a-assets></a-assets>
 
-    <a-scene
-      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
-      embedded
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
-      loading-screen="enabled: false"
-      onloaded="document.getElementById('loadingText').style.display='none';"
-    >
-      <a-assets></a-assets>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-text value="お題" position="0 0 0" align="center" color="black" width="2"></a-text>
+    </a-entity>
+  </a-scene>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-box color="red" position="0 0 0" scale="0.1 0.1 0.1"></a-box>
-      </a-entity>
-    </a-scene>
-  </body>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const sceneEl = document.querySelector("a-scene");
+      sceneEl.addEventListener("loaded", () => {
+        document.getElementById("loadingText").style.display = "none";
+      });
+
+      // お題取得（URLパラメータ）
+      const urlParams = new URLSearchParams(window.location.search);
+      const word = urlParams.get("word") || "お題";
+
+      // お題を表示
+      const targetEntity = document.querySelector('[mindar-image-target]');
+      const textEntity = targetEntity.querySelector('a-text');
+      textEntity.setAttribute('value', word);
+    });
+  </script>
+</body>
 </html>
