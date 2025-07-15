@@ -76,16 +76,22 @@ function joinGame(gameId) {
         document.getElementById("joinSection").style.display = "block";
         document.getElementById("gameIdDisplay").textContent = gameId;
 
+        const showWordBtn = document.getElementById("showWord");
+        const showARBtn = document.getElementById("showAR");
+
         // プレイヤー数監視（ボタン有効化用）
         firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
           const players = snapshot.val() || [];
-          const showBtn = document.getElementById("showWord");
           if (players.length === playerCount) {
-            showBtn.disabled = false;
-            showBtn.textContent = "お題を見る";
+            showWordBtn.disabled = false;
+            showWordBtn.textContent = "お題を見る（議論開始）";
+
+            showARBtn.disabled = false;
           } else {
-            showBtn.disabled = true;
-            showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
+            showWordBtn.disabled = true;
+            showWordBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
+
+            showARBtn.disabled = true;
           }
         });
 
@@ -100,7 +106,7 @@ function joinGame(gameId) {
   });
 }
 
-// 🔘 誰か1人がボタンを押すと discussionStarted = true を設定
+// 「お題を見る」ボタンは議論開始のトリガーに
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -116,11 +122,23 @@ document.getElementById("showWord").addEventListener("click", () => {
   });
 });
 
-// 💬 お題とタイマー開始処理（全員で共有）
+// 「ARで見る」ボタンでARページを開く（個人で好きなタイミングで）
+document.getElementById("showAR").addEventListener("click", () => {
+  if (!currentGameId || myIndex === null) return;
+
+  firebase.database().ref(`games/${currentGameId}`).once("value").then(snapshot => {
+    const data = snapshot.val();
+    const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
+
+    const arUrl = `${location.origin}/ar.html?word=${encodeURIComponent(word)}`;
+    window.open(arUrl, "_blank");
+  });
+});
+
 function startDiscussion(gameId) {
-  const showBtn = document.getElementById("showWord");
-  showBtn.disabled = true;
-  showBtn.textContent = "お題を表示中";
+  const showWordBtn = document.getElementById("showWord");
+  showWordBtn.disabled = true;
+  showWordBtn.textContent = "お題を表示中";
 
   firebase.database().ref(`games/${gameId}`).once("value").then(snapshot => {
     const data = snapshot.val();
@@ -153,74 +171,3 @@ function startDiscussion(gameId) {
     }, 1000);
   });
 }
-
-document.getElementById("startVote").addEventListener("click", () => {
-  document.getElementById("voteSection").style.display = "block";
-
-  const voteOptions = document.getElementById("voteOptions");
-  voteOptions.innerHTML = "";
-
-  firebase.database().ref(`games/${currentGameId}/players`).once("value").then(snapshot => {
-    const names = snapshot.val() || [];
-    names.forEach((name, index) => {
-      const btn = document.createElement("button");
-      btn.textContent = name;
-      btn.onclick = () => {
-        firebase.database().ref(`games/${currentGameId}/votes/${myIndex}`).set(index);
-        document.getElementById("voteSection").innerHTML = "投票が完了しました。結果を待っています...";
-      };
-      voteOptions.appendChild(btn);
-    });
-  });
-});
-
-firebase.database().ref().child("games").on("child_changed", (snapshot) => {
-  const data = snapshot.val();
-  if (snapshot.key !== currentGameId) return;
-
-  const votes = data.votes || {};
-  if (Object.keys(votes).length < data.playerCount) return;
-  if (data.status === "done") return;
-
-  const voteCount = {};
-  Object.values(votes).forEach(index => {
-    voteCount[index] = (voteCount[index] || 0) + 1;
-  });
-
-  const maxVotes = Math.max(...Object.values(voteCount));
-  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
-  const isLiarFound = topVoted.includes(String(data.liarIndex));
-
-  const players = data.players || [];
-  const resultText = isLiarFound
-    ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
-    : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
-
-  alert(resultText);
-
-  firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
-
-  let resultStr = "";
-  Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
-    resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
-  });
-  document.getElementById("voteResult").textContent = resultStr;
-
-  document.getElementById("resetGame").style.display = "inline-block";
-});
-
-document.getElementById("resetGame").addEventListener("click", () => {
-  firebase.database().ref(`games/${currentGameId}`).update({
-    votes: {},
-    status: "waiting",
-    discussionStarted: false,
-    discussionStartTime: null
-  });
-  document.getElementById("voteSection").style.display = "none";
-  document.getElementById("voteResult").textContent = "";
-  document.getElementById("resetGame").style.display = "none";
-  document.getElementById("discussionTimer").textContent = "";
-  document.getElementById("wordDisplay").textContent = "";
-  document.getElementById("timerBar").style.width = "100%";
-  document.getElementById("timerContainer").style.display = "none";
-});
