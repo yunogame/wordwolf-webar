@@ -76,16 +76,22 @@ function joinGame(gameId) {
         document.getElementById("joinSection").style.display = "block";
         document.getElementById("gameIdDisplay").textContent = gameId;
 
+        const showWordBtn = document.getElementById("showWord");
+        const showARBtn = document.getElementById("showAR");
+
         // プレイヤー数監視（ボタン有効化用）
         firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
           const players = snapshot.val() || [];
-          const showBtn = document.getElementById("showWord");
           if (players.length === playerCount) {
-            showBtn.disabled = false;
-            showBtn.textContent = "お題を見る";
+            showWordBtn.disabled = false;
+            showWordBtn.textContent = "お題を見る";
+
+            showARBtn.disabled = false;
           } else {
-            showBtn.disabled = true;
-            showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
+            showWordBtn.disabled = true;
+            showWordBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
+
+            showARBtn.disabled = true;
           }
         });
 
@@ -100,7 +106,7 @@ function joinGame(gameId) {
   });
 }
 
-// 🔘 誰か1人がボタンを押すと discussionStarted = true を設定
+// 「お題を見る」ボタンは画面内テキスト表示だけに
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -108,17 +114,27 @@ document.getElementById("showWord").addEventListener("click", () => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
 
-    // ARページを新しいタブで開く
+    document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
+  });
+});
+
+// 「ARで見る」ボタンでARページを開く
+document.getElementById("showAR").addEventListener("click", () => {
+  if (!currentGameId || myIndex === null) return;
+
+  firebase.database().ref(`games/${currentGameId}`).once("value").then(snapshot => {
+    const data = snapshot.val();
+    const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
+
     const arUrl = `${location.origin}/ar.html?word=${encodeURIComponent(word)}`;
     window.open(arUrl, "_blank");
   });
 });
 
-// 💬 お題とタイマー開始処理（全員で共有）
 function startDiscussion(gameId) {
-  const showBtn = document.getElementById("showWord");
-  showBtn.disabled = true;
-  showBtn.textContent = "お題を表示中";
+  const showWordBtn = document.getElementById("showWord");
+  showWordBtn.disabled = true;
+  showWordBtn.textContent = "お題を表示中";
 
   firebase.database().ref(`games/${gameId}`).once("value").then(snapshot => {
     const data = snapshot.val();
