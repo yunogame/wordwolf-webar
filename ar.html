@@ -1,30 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <title>WordWolf AR</title>
-
-  <!-- A-FrameとMindAR -->
+  <meta charset="UTF-8" />
+  <title>WordWolf AR Viewer</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
-
   <style>
     body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
+      margin: 0; padding: 0; overflow: hidden; height: 100%; width: 100%;
+      background-color: black;
     }
     #loadingText {
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
+      color: white;
       font-size: 1.5em;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
       z-index: 10;
+      pointer-events: none;
+    }
+    a-scene {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      margin: 0; padding: 0;
+      overflow: hidden;
+      background: transparent;
+      z-index: 1;
     }
   </style>
 </head>
@@ -32,38 +33,41 @@
   <div id="loadingText">カメラ起動中...</div>
 
   <a-scene
-    mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
+    mindar-image="imageTargetSrc: targets.mind; autoStart: false;"
+    vr-mode-ui="enabled: false"
     embedded
     color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true"
-    loading-screen="enabled: false"
+    device-orientation-permission-ui="enabled: false"
   >
-    <a-assets></a-assets>
-
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-text value="お題" position="0 0 0" align="center" color="black" width="2"></a-text>
+      <a-text id="arWordText" value="" position="0 0.1 0" rotation="0 0 0" align="center" color="#ff0" side="double" 
+              width="1.5" height="1" font="mozillavr"></a-text>
     </a-entity>
   </a-scene>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const sceneEl = document.querySelector("a-scene");
-      sceneEl.addEventListener("loaded", () => {
-        document.getElementById("loadingText").style.display = "none";
-      });
+    const scene = document.querySelector("a-scene");
+    const mindarComponent = scene.components["mindar-image"];
+    const loadingText = document.getElementById("loadingText");
+    const arWordText = document.getElementById("arWordText");
 
-      // お題取得（URLパラメータ）
-      const urlParams = new URLSearchParams(window.location.search);
-      const word = urlParams.get("word") || "お題";
+    // URLパラメータからwordを取得して表示
+    const params = new URLSearchParams(window.location.search);
+    const word = params.get("word") || "お題なし";
 
-      // お題を表示
-      const targetEntity = document.querySelector('[mindar-image-target]');
-      const textEntity = targetEntity.querySelector('a-text');
-      textEntity.setAttribute('value', word);
+    arWordText.setAttribute("value", word);
+
+    // マーカー認識でカメラ起動とテキスト表示
+    scene.addEventListener("renderstart", () => {
+      loadingText.style.display = "none";
+    });
+
+    // mindar-imageコンポーネントのautoStartがfalseなので自分で起動する
+    scene.addEventListener("loaded", () => {
+      mindarComponent.start();
     });
   </script>
 </body>
