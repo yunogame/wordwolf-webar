@@ -1,28 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>WordWolf AR</title>
+
+  <!-- A-FrameとMindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
+    body, html {
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      background: black;
+      height: 100%;
+      width: 100%;
     }
     #loadingText {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: white;
+      font-size: 1.5em;
+      background: rgba(255, 255, 255, 0.8);
       padding: 10px 20px;
-      border-radius: 10px;
-      font-size: 1.2em;
-      z-index: 999;
+      border-radius: 8px;
+      z-index: 10;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -39,24 +44,38 @@
     loading-screen="enabled: false"
   >
     <a-assets></a-assets>
+
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+    <!-- ターゲット0を認識したらここが表示される -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-text value="お題" position="0 0.5 0" color="yellow" align="center" width="3"></a-text>
+      <a-text
+        id="arWordText"
+        value="お題"
+        position="0 0 0"
+        rotation="-90 0 0"
+        align="center"
+        color="#000000"
+        width="2"
+      ></a-text>
     </a-entity>
   </a-scene>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const params = new URLSearchParams(location.search);
-      const word = params.get("word") || "お題";
-      const textEntity = document.querySelector('a-text');
-      textEntity.setAttribute("value", word);
-
       const sceneEl = document.querySelector("a-scene");
-      sceneEl.addEventListener("loaded", () => {
+
+      sceneEl.addEventListener("renderstart", () => {
         document.getElementById("loadingText").style.display = "none";
       });
+
+      // URLパラメータからお題取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const word = urlParams.get("word") || "お題";
+
+      // ARテキスト要素にお題をセット
+      const textEntity = document.getElementById("arWordText");
+      textEntity.setAttribute("value", word);
     });
   </script>
 </body>
