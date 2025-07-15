@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>WordWolf AR</title>
 
-  <!-- A-FrameとMindAR -->
+  <!-- A-Frame と MindAR の読み込み -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
@@ -14,8 +14,7 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      height: 100%;
-      width: 100%;
+      background: black;
     }
     #loadingText {
       position: absolute;
@@ -23,11 +22,10 @@
       left: 50%;
       transform: translate(-50%, -50%);
       font-size: 1.5em;
-      background: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.9);
       padding: 10px 20px;
-      border-radius: 8px;
-      z-index: 10;
-      pointer-events: none;
+      border-radius: 10px;
+      z-index: 999;
     }
   </style>
 </head>
@@ -47,35 +45,34 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- ターゲット0を認識したらここが表示される -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-text
-        id="arWordText"
-        value="お題"
-        position="0 0 0"
-        rotation="-90 0 0"
-        align="center"
-        color="#000000"
-        width="2"
-      ></a-text>
+      <a-text value="読み込み中..."
+              position="0 0.3 0"
+              color="white"
+              align="center"
+              width="4"
+              side="double"
+              baseline="center"></a-text>
     </a-entity>
   </a-scene>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const sceneEl = document.querySelector("a-scene");
-
-      sceneEl.addEventListener("renderstart", () => {
-        document.getElementById("loadingText").style.display = "none";
-      });
-
-      // URLパラメータからお題取得
       const urlParams = new URLSearchParams(window.location.search);
       const word = urlParams.get("word") || "お題";
 
-      // ARテキスト要素にお題をセット
-      const textEntity = document.getElementById("arWordText");
-      textEntity.setAttribute("value", word);
+      const sceneEl = document.querySelector("a-scene");
+      const loadingEl = document.getElementById("loadingText");
+
+      sceneEl.addEventListener("loaded", () => {
+        loadingEl.style.display = "none";
+
+        // テキストを更新
+        const textEntity = document.querySelector('[mindar-image-target] a-text');
+        if (textEntity) {
+          textEntity.setAttribute("value", word);
+        }
+      });
     });
   </script>
 </body>
