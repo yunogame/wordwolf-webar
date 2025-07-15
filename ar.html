@@ -10,12 +10,15 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body, html {
+    html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
+      width: 100%;
       overflow: hidden;
       background: black;
     }
+
     #loadingText {
       position: absolute;
       top: 50%;
@@ -26,6 +29,14 @@
       padding: 10px 20px;
       border-radius: 10px;
       z-index: 999;
+    }
+
+    a-scene {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100% !important;
+      width: 100% !important;
     }
   </style>
 </head>
@@ -67,7 +78,6 @@
       sceneEl.addEventListener("loaded", () => {
         loadingEl.style.display = "none";
 
-        // テキストを更新
         const textEntity = document.querySelector('[mindar-image-target] a-text');
         if (textEntity) {
           textEntity.setAttribute("value", word);
