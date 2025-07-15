@@ -1,46 +1,76 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>ARお題表示</title>
-    <script src="https://cdn.jsdelivr.net/npm/aframe@1.3.0/dist/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-image-aframe.prod.js"></script>
-    <style>
-      body, html { margin: 0; overflow: hidden; }
-    </style>
-  </head>
-  <body>
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind;"
-      embedded
-      color-space="sRGB"
-      renderer="colorManagement: true;"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
-    >
-      <a-assets>
-        <a-asset-item id="my-font" src="https://cdn.aframe.io/fonts/mozillavr.fnt"></a-asset-item>
-      </a-assets>
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>WordWolf AR</title>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-image-aframe.prod.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">読み込み中...</div>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-text
-          id="wordText"
-          value="読み込み中..."
-          position="0 0 0"
-          align="center"
+  <a-scene
+    mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: #loading; uiError: #error; uiScanning: #scanning;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: true"
+    embedded
+    renderer="colorManagement: true, logarithmicDepthBuffer: true, antialias: true;"
+  >
+    <a-assets>
+      <style>
+        .overlay {
+          font-size: 100px;
+          color: white;
+          background: rgba(0,0,0,0.6);
+          padding: 20px;
+          border-radius: 20px;
+        }
+      </style>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity position="0 0 0">
+        <a-plane 
+          id="wordPlane"
+          color="#222"
           width="1.5"
-          color="black"
-        ></a-text>
+          height="0.5"
+          position="0 0 0"
+        >
+          <a-text id="wordText"
+                  value=""
+                  align="center"
+                  width="1.4"
+                  color="white"
+                  position="0 0 0.01">
+          </a-text>
+        </a-plane>
       </a-entity>
-    </a-scene>
+    </a-entity>
+  </a-scene>
 
-    <script>
-      // URLパラメータからお題を取得して表示
-      const params = new URLSearchParams(location.search);
-      const word = params.get("word") || "お題不明";
-      document.getElementById("wordText").setAttribute("value", word);
-    </script>
-  </body>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const word = urlParams.get("word") || "お題なし";
+    document.getElementById("wordText").setAttribute("value", word);
+  </script>
+</body>
 </html>
