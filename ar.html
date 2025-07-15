@@ -1,66 +1,48 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>ARでお題表示</title>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-    #loading {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 10;
-    }
-  </style>
-</head>
-<body>
-  <div id="loading">カメラを起動中...</div>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AR Test</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #loadingText {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5em;
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loadingText">カメラ起動中...</div>
 
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
-    embedded
-    color-space="sRGB"
-    renderer="colorManagement: true, physicallyCorrectLights"
-    device-orientation-permission-ui="enabled: true"
-    vr-mode-ui="enabled: false"
-    loading-screen="enabled: false"
-    onloaded="document.getElementById('loading').style.display='none';"
-  >
-    <a-assets>
-      <a-asset-item id="font" src="https://cdn.aframe.io/fonts/mozillavr.fnt"></a-asset-item>
-    </a-assets>
+    <a-scene
+      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
+      embedded
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true"
+      loading-screen="enabled: false"
+      onloaded="document.getElementById('loadingText').style.display='none';"
+    >
+      <a-assets></a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-text 
-        value=""
-        id="ar-word"
-        font="#font"
-        align="center"
-        color="yellow"
-        position="0 0 0"
-        scale="0.5 0.5 0.5">
-      </a-text>
-    </a-entity>
-  </a-scene>
-
-  <script>
-    // URLパラメータから word を取得して a-text に表示
-    const params = new URLSearchParams(window.location.search);
-    const word = params.get("word") || "お題なし";
-    document.getElementById("ar-word").setAttribute("value", word);
-  </script>
-</body>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-box color="red" position="0 0 0" scale="0.1 0.1 0.1"></a-box>
+      </a-entity>
+    </a-scene>
+  </body>
 </html>
