@@ -1,48 +1,97 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>AR Test</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-      body, html {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-      }
-      #loadingText {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.5em;
-        background: white;
-        padding: 10px;
-        border-radius: 8px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="loadingText">カメラ起動中...</div>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>WordWolf v2.51</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="script.js" defer></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #setup, #joinSection, #nameInputSection, #voteSection {
+      margin-top: 20px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+    }
+    #voteOptions button {
+      display: inline-block;
+    }
+    #qrCodeContainer {
+      margin-top: 10px;
+    }
+    #timerContainer {
+      width: 80%;
+      margin: 10px auto;
+      height: 25px;
+      background: #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+    }
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      background: red;
+      transition: width 1s linear;
+    }
+    #discussionTimer {
+      font-size: 24px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>WordWolf v2.51</h1>
 
-    <a-scene
-      mindar-image="imageTargetSrc: targets.mind; autoStart: true;"
-      embedded
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
-      loading-screen="enabled: false"
-      onloaded="document.getElementById('loadingText').style.display='none';"
-    >
-      <a-assets></a-assets>
+  <div id="nameInputSection">
+    <p>プレイヤー名を入力してください:</p>
+    <input type="text" id="playerNameInput" />
+    <button id="enterName">決定</button>
+  </div>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <div id="setup" style="display: none;">
+    <label>参加人数:
+      <input type="number" id="playerCount" min="2" value="4" />
+    </label>
+    <button id="createGame">ゲーム作成</button>
+  </div>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-box color="red" position="0 0 0" scale="0.1 0.1 0.1"></a-box>
-      </a-entity>
-    </a-scene>
-  </body>
+  <div id="joinSection" style="display: none;">
+    <p>ゲームID: <span id="gameIdDisplay"></span></p>
+    <div id="qrCodeContainer"></div>
+
+    <button id="showWord" disabled>お題を見る</button>
+    <button id="showAR" disabled>ARで見る</button>
+    <p id="wordDisplay"></p>
+
+    <div id="timerContainer">
+      <div id="timerBar"></div>
+    </div>
+    <p id="discussionTimer"></p>
+
+    <hr>
+
+    <button id="startVote">投票を始める</button>
+
+    <div id="voteSection" style="display: none;">
+      <h3>投票してください:</h3>
+      <div id="voteOptions"></div>
+    </div>
+
+    <div>
+      <h3>投票結果:</h3>
+      <pre id="voteResult"></pre>
+    </div>
+
+    <button id="resetGame" style="display: none;">もう一度プレイ</button>
+  </div>
+</body>
 </html>
