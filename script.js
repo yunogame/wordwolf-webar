@@ -33,6 +33,7 @@ document.getElementById("createGame").addEventListener("click", async () => {
     players: [],
     votes: {},
     status: "waiting",
+    discussionStarted: false,
     discussionStartTime: null
   });
 
@@ -75,6 +76,7 @@ function joinGame(gameId) {
         document.getElementById("joinSection").style.display = "block";
         document.getElementById("gameIdDisplay").textContent = gameId;
 
+        // プレイヤー数監視（ボタン有効化用）
         firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
           const players = snapshot.val() || [];
           const showBtn = document.getElementById("showWord");
@@ -86,65 +88,71 @@ function joinGame(gameId) {
             showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
           }
         });
+
+        // お題表示トリガーの監視（全員で反応）
+        firebase.database().ref(`games/${gameId}/discussionStarted`).on("value", (snapshot) => {
+          if (snapshot.val()) {
+            startDiscussion(gameId);
+          }
+        });
       });
-    });
-  });
-
-  // 🔄 お題表示・議論タイマーの同期
-  firebase.database().ref(`games/${gameId}/discussionStartTime`).on("value", snapshot => {
-    const startTime = snapshot.val();
-    if (!startTime) return;
-
-    const showBtn = document.getElementById("showWord");
-    showBtn.disabled = true;
-    showBtn.textContent = "お題を表示中";
-
-    firebase.database().ref(`games/${gameId}`).once("value").then(snapshot => {
-      const data = snapshot.val();
-      const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
-      document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
-
-      const timerDisplay = document.getElementById("discussionTimer");
-      const timerContainer = document.getElementById("timerContainer");
-      const timerBar = document.getElementById("timerBar");
-
-      timerContainer.style.display = "block";
-      const total = 60 * 1000;
-      const endTime = startTime + total;
-
-      const intervalId = setInterval(() => {
-        const now = Date.now();
-        const timeLeftMs = endTime - now;
-        const timeLeftSec = Math.max(0, Math.ceil(timeLeftMs / 1000));
-        const percent = Math.max(0, (timeLeftMs / total) * 100);
-
-        timerDisplay.textContent = `議論タイム: ${timeLeftSec} 秒`;
-        timerBar.style.width = `${percent}%`;
-
-        if (timeLeftMs <= 0) {
-          clearInterval(intervalId);
-          timerDisplay.textContent = "議論終了！投票に移ります。";
-          timerBar.style.width = `0%`;
-          document.getElementById("startVote").click();
-        }
-      }, 1000);
     });
   });
 }
 
-// 誰か1人が押せばOK（1回だけ反応する）
+// 🔘 誰か1人がボタンを押すと discussionStarted = true を設定
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
-  firebase.database().ref(`games/${currentGameId}/discussionStartTime`).once("value").then(snapshot => {
-    if (!snapshot.val()) {
-      const startTime = Date.now();
-      firebase.database().ref(`games/${currentGameId}`).update({
-        discussionStartTime: startTime
+  const gameRef = firebase.database().ref(`games/${currentGameId}`);
+  gameRef.once("value").then(snapshot => {
+    const data = snapshot.val();
+    if (!data.discussionStarted) {
+      gameRef.update({
+        discussionStarted: true,
+        discussionStartTime: Date.now()
       });
     }
   });
 });
+
+// 💬 お題とタイマー開始処理（全員で共有）
+function startDiscussion(gameId) {
+  const showBtn = document.getElementById("showWord");
+  showBtn.disabled = true;
+  showBtn.textContent = "お題を表示中";
+
+  firebase.database().ref(`games/${gameId}`).once("value").then(snapshot => {
+    const data = snapshot.val();
+    const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
+    document.getElementById("wordDisplay").innerText = `あなたのお題: ${word}`;
+
+    const timerDisplay = document.getElementById("discussionTimer");
+    const timerContainer = document.getElementById("timerContainer");
+    const timerBar = document.getElementById("timerBar");
+
+    timerContainer.style.display = "block";
+    const total = 60 * 1000;
+    const endTime = data.discussionStartTime + total;
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const timeLeftMs = endTime - now;
+      const timeLeftSec = Math.max(0, Math.ceil(timeLeftMs / 1000));
+      const percent = Math.max(0, (timeLeftMs / total) * 100);
+
+      timerDisplay.textContent = `議論タイム: ${timeLeftSec} 秒`;
+      timerBar.style.width = `${percent}%`;
+
+      if (timeLeftMs <= 0) {
+        clearInterval(intervalId);
+        timerDisplay.textContent = "議論終了！投票に移ります。";
+        timerBar.style.width = `0%`;
+        document.getElementById("startVote").click();
+      }
+    }, 1000);
+  });
+}
 
 document.getElementById("startVote").addEventListener("click", () => {
   document.getElementById("voteSection").style.display = "block";
@@ -180,4 +188,39 @@ firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   });
 
   const maxVotes = Math.max(...Object.values(voteCount));
-  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxV
+  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
+  const isLiarFound = topVoted.includes(String(data.liarIndex));
+
+  const players = data.players || [];
+  const resultText = isLiarFound
+    ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
+    : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
+
+  alert(resultText);
+
+  firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
+
+  let resultStr = "";
+  Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
+    resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
+  });
+  document.getElementById("voteResult").textContent = resultStr;
+
+  document.getElementById("resetGame").style.display = "inline-block";
+});
+
+document.getElementById("resetGame").addEventListener("click", () => {
+  firebase.database().ref(`games/${currentGameId}`).update({
+    votes: {},
+    status: "waiting",
+    discussionStarted: false,
+    discussionStartTime: null
+  });
+  document.getElementById("voteSection").style.display = "none";
+  document.getElementById("voteResult").textContent = "";
+  document.getElementById("resetGame").style.display = "none";
+  document.getElementById("discussionTimer").textContent = "";
+  document.getElementById("wordDisplay").textContent = "";
+  document.getElementById("timerBar").style.width = "100%";
+  document.getElementById("timerContainer").style.display = "none";
+});
