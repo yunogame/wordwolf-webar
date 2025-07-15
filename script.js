@@ -104,15 +104,13 @@ function joinGame(gameId) {
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
-  const gameRef = firebase.database().ref(`games/${currentGameId}`);
-  gameRef.once("value").then(snapshot => {
+  firebase.database().ref(`games/${currentGameId}`).once("value").then(snapshot => {
     const data = snapshot.val();
-    if (!data.discussionStarted) {
-      gameRef.update({
-        discussionStarted: true,
-        discussionStartTime: Date.now()
-      });
-    }
+    const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
+
+    // ARページを新しいタブで開く
+    const arUrl = `${location.origin}/ar.html?word=${encodeURIComponent(word)}`;
+    window.open(arUrl, "_blank");
   });
 });
 
