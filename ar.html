@@ -2,75 +2,65 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>WordWolf AR</title>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
+  <title>ARでお題表示</title>
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-image-aframe.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.7/dist/mindar-image-aframe.prod.js"></script>
   <style>
     body, html {
       margin: 0;
+      padding: 0;
       overflow: hidden;
-      font-family: sans-serif;
     }
     #loading {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 24px;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
-  <div id="loading">読み込み中...</div>
+  <div id="loading">カメラを起動中...</div>
 
   <a-scene
-    mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: #loading; uiError: #error; uiScanning: #scanning;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
     embedded
-    renderer="colorManagement: true, logarithmicDepthBuffer: true, antialias: true;"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights"
+    device-orientation-permission-ui="enabled: true"
+    vr-mode-ui="enabled: false"
+    loading-screen="enabled: false"
+    onloaded="document.getElementById('loading').style.display='none';"
   >
     <a-assets>
-      <style>
-        .overlay {
-          font-size: 100px;
-          color: white;
-          background: rgba(0,0,0,0.6);
-          padding: 20px;
-          border-radius: 20px;
-        }
-      </style>
+      <a-asset-item id="font" src="https://cdn.aframe.io/fonts/mozillavr.fnt"></a-asset-item>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-entity position="0 0 0">
-        <a-plane 
-          id="wordPlane"
-          color="#222"
-          width="1.5"
-          height="0.5"
-          position="0 0 0"
-        >
-          <a-text id="wordText"
-                  value=""
-                  align="center"
-                  width="1.4"
-                  color="white"
-                  position="0 0 0.01">
-          </a-text>
-        </a-plane>
-      </a-entity>
+      <a-text 
+        value=""
+        id="ar-word"
+        font="#font"
+        align="center"
+        color="yellow"
+        position="0 0 0"
+        scale="0.5 0.5 0.5">
+      </a-text>
     </a-entity>
   </a-scene>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const word = urlParams.get("word") || "お題なし";
-    document.getElementById("wordText").setAttribute("value", word);
+    // URLパラメータから word を取得して a-text に表示
+    const params = new URLSearchParams(window.location.search);
+    const word = params.get("word") || "お題なし";
+    document.getElementById("ar-word").setAttribute("value", word);
   </script>
 </body>
 </html>
