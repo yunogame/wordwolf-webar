@@ -172,6 +172,7 @@ function startDiscussion(gameId) {
   });
 }
 
+
 document.getElementById("startVote").addEventListener("click", () => {
   document.getElementById("voteSection").style.display = "block";
 
