@@ -76,22 +76,22 @@ function joinGame(gameId) {
         document.getElementById("joinSection").style.display = "block";
         document.getElementById("gameIdDisplay").textContent = gameId;
 
-        const showWordBtn = document.getElementById("showWord");
+        const showBtn = document.getElementById("showWord");
         const showARBtn = document.getElementById("showAR");
 
-        // プレイヤー数監視
         firebase.database().ref(`games/${gameId}/players`).on("value", (snapshot) => {
           const players = snapshot.val() || [];
           if (players.length === playerCount) {
-            showWordBtn.disabled = false;
-            showARBtn.disabled = true;
+            showBtn.disabled = false;
+            showBtn.textContent = "お題を見る";
+            showARBtn.disabled = false;
           } else {
-            showWordBtn.disabled = true;
+            showBtn.disabled = true;
+            showBtn.textContent = `参加待機中 (${players.length}/${playerCount})`;
             showARBtn.disabled = true;
           }
         });
 
-        // 議論開始監視
         firebase.database().ref(`games/${gameId}/discussionStarted`).on("value", (snapshot) => {
           if (snapshot.val()) {
             startDiscussion(gameId);
@@ -102,7 +102,6 @@ function joinGame(gameId) {
   });
 }
 
-// お題表示ボタン（議論開始トリガー）
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -118,23 +117,24 @@ document.getElementById("showWord").addEventListener("click", () => {
   });
 });
 
-// AR表示ボタン（個人で使用）
+// ✅ ARで見るボタン：GitHub Pages のフルパスに修正済み
 document.getElementById("showAR").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
   firebase.database().ref(`games/${currentGameId}`).once("value").then(snapshot => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
-    const arUrl = `${location.origin}/ar.html?word=${encodeURIComponent(word)}`;
+
+    // GitHub Pages 上のフルパス
+    const arUrl = `https://yunogame.github.io/wordwolf-webar/ar.html?word=${encodeURIComponent(word)}`;
     window.open(arUrl, "_blank");
   });
 });
 
 function startDiscussion(gameId) {
-  const showWordBtn = document.getElementById("showWord");
-  const showARBtn = document.getElementById("showAR");
-  showWordBtn.disabled = true;
-  showARBtn.disabled = false;
+  const showBtn = document.getElementById("showWord");
+  showBtn.disabled = true;
+  showBtn.textContent = "お題を表示中";
 
   firebase.database().ref(`games/${gameId}`).once("value").then(snapshot => {
     const data = snapshot.val();
@@ -188,7 +188,7 @@ document.getElementById("startVote").addEventListener("click", () => {
   });
 });
 
-firebase.database().ref("games").on("child_changed", (snapshot) => {
+firebase.database().ref().child("games").on("child_changed", (snapshot) => {
   const data = snapshot.val();
   if (snapshot.key !== currentGameId) return;
 
