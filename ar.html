@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>ARお題表示</title>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.3.0/dist/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-image-aframe.prod.js"></script>
+    <style>
+      body, html { margin: 0; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind;"
+      embedded
+      color-space="sRGB"
+      renderer="colorManagement: true;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true"
+    >
+      <a-assets>
+        <a-asset-item id="my-font" src="https://cdn.aframe.io/fonts/mozillavr.fnt"></a-asset-item>
+      </a-assets>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-text
+          id="wordText"
+          value="読み込み中..."
+          position="0 0 0"
+          align="center"
+          width="1.5"
+          color="black"
+        ></a-text>
+      </a-entity>
+    </a-scene>
+
+    <script>
+      // URLパラメータからお題を取得して表示
+      const params = new URLSearchParams(location.search);
+      const word = params.get("word") || "お題不明";
+      document.getElementById("wordText").setAttribute("value", word);
+    </script>
+  </body>
+</html>
