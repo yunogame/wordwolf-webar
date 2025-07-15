@@ -23,11 +23,11 @@
       left: 50%;
       transform: translate(-50%, -50%);
       font-size: 1.5em;
-      background: rgba(255, 255, 255, 0.8); /* 半透明に変更 */
+      background: rgba(255, 255, 255, 0.8);
       padding: 10px 20px;
       border-radius: 8px;
       z-index: 10;
-      pointer-events: none; /* クリックなど干渉しない */
+      pointer-events: none;
     }
   </style>
 </head>
@@ -47,16 +47,24 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+    <!-- ターゲット0を認識したらここが表示される -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-text value="お題" position="0 0 0" align="center" color="black" width="2"></a-text>
+      <a-text
+        id="arWordText"
+        value="お題"
+        position="0 0 0"
+        rotation="-90 0 0"
+        align="center"
+        color="#000000"
+        width="2"
+      ></a-text>
     </a-entity>
   </a-scene>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
-      
-      // 変更: カメラ映像がレンダリング開始されたらローディング非表示
+
       sceneEl.addEventListener("renderstart", () => {
         document.getElementById("loadingText").style.display = "none";
       });
@@ -65,10 +73,9 @@
       const urlParams = new URLSearchParams(window.location.search);
       const word = urlParams.get("word") || "お題";
 
-      // お題を表示
-      const targetEntity = document.querySelector('[mindar-image-target]');
-      const textEntity = targetEntity.querySelector('a-text');
-      textEntity.setAttribute('value', word);
+      // ARテキスト要素にお題をセット
+      const textEntity = document.getElementById("arWordText");
+      textEntity.setAttribute("value", word);
     });
   </script>
 </body>
