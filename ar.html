@@ -44,18 +44,19 @@
     loading-screen="enabled: false"
   >
     <a-assets>
+      <!-- モデル読み込み -->
       <a-asset-item id="appleModel" src="Apple.glb"></a-asset-item>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- ターゲット認識時にモデルを表示 -->
+    <!-- ターゲットが認識されたときに表示されるエンティティ -->
     <a-entity mindar-image-target="targetIndex: 0">
       <a-gltf-model
         src="#appleModel"
         position="0 0 0"
-        scale="0.5 0.5 0.5"
         rotation="0 0 0"
+        scale="0.1 0.1 0.1"
       ></a-gltf-model>
     </a-entity>
   </a-scene>
