@@ -51,12 +51,12 @@
     <a-entity mindar-image-target="targetIndex: 0">
       <a-text
         id="arWordText"
-        value="お題"
-        position="0 0 0"
-        rotation="-90 0 0"
+        value="テスト表示"
+        position="0 0.1 0"
+        rotation="0 0 0"
         align="center"
         color="#000000"
-        width="2"
+        width="3"
       ></a-text>
     </a-entity>
   </a-scene>
@@ -64,18 +64,13 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
-
       sceneEl.addEventListener("renderstart", () => {
         document.getElementById("loadingText").style.display = "none";
       });
 
-      // URLパラメータからお題取得
-      const urlParams = new URLSearchParams(window.location.search);
-      const word = urlParams.get("word") || "お題";
-
-      // ARテキスト要素にお題をセット
+      // 本来はURLから取得するが、今回は固定表示
       const textEntity = document.getElementById("arWordText");
-      textEntity.setAttribute("value", word);
+      textEntity.setAttribute("value", "テスト表示");
     });
   </script>
 </body>
