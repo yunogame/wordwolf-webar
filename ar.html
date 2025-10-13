@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>WordWolf AR Model Test (OBJ版)</title>
+  <title>WordWolf AR Model Test (OBJ + 強制テクスチャ)</title>
 
   <!-- A-Frame と MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -44,17 +44,19 @@
     loading-screen="enabled: false"
   >
     <a-assets>
-      <!-- OBJモデル＋MTLファイルを読み込む -->
-      <a-asset-item id="appleObj" src="https://yunogame.github.io/wordwolf-webar/appleModel.obj"></a-asset-item>
-      <a-asset-item id="appleMtl" src="https://yunogame.github.io/wordwolf-webar/appleModel.mtl"></a-asset-item>
+      <!-- OBJモデル -->
+      <a-asset-item id="appleObj" src="https://yunogame.github.io/wordwolf-webar/apple.obj"></a-asset-item>
+      <!-- PNGテクスチャ -->
+      <img id="appleTexture" src="https://yunogame.github.io/wordwolf-webar/appleTexture.png">
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <!-- 🍎 OBJモデル -->
+      <!-- 🍎 OBJ + 強制テクスチャ -->
       <a-entity
-        obj-model="obj: #appleObj; mtl: #appleMtl"
+        obj-model="obj: #appleObj"
+        material="src: #appleTexture; color: white;"
         scale="0.5 0.5 0.5"
         position="0 0 0"
         rotation="0 0 0"
@@ -62,7 +64,7 @@
 
       <!-- テキスト -->
       <a-text
-        value="Apple OBJ Loaded!"
+        value="Apple Model Loaded!"
         position="0 1.2 0"
         rotation="0 0 0"
         align="center"
