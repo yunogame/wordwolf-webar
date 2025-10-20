@@ -15,7 +15,7 @@ Kd 1.00 1.00 1.00
 Ka 1.00 1.00 1.00
 Tf 1.00 1.00 1.00
 Ni 1.00
-map_Kd appleHa.jpg
+map_Kd appleKuki.png
 
 newmtl aiStandardSurface3SG
 illum 4
@@ -23,7 +23,7 @@ Kd 1.00 1.00 1.00
 Ka 1.00 1.00 1.00
 Tf 1.00 1.00 1.00
 Ni 1.00
-map_Kd appleHa.jpg
+map_Kd appleKuki.png
 
 newmtl initialShadingGroup
 illum 4
