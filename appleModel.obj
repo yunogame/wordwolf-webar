@@ -1,6 +1,6 @@
 # This file uses centimeters as units for non-parametric coordinates.
 
-mtllib OBJ.mtl
+mtllib appleModel.mtl
 g default
 v 0.323849 3.350390 -0.186974
 v 0.186974 3.216182 -0.323849
