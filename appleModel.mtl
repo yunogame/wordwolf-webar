@@ -1,5 +1,5 @@
 # Blender MTL File: 'appleModel.blend'
-# æ‰‹å‹•ã§ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’æŒ‡å®š
+# è“®‚ÅƒeƒNƒXƒ`ƒƒ‚ğw’è
 
 newmtl aiStandardSurface1SG
 illum 4
@@ -15,7 +15,7 @@ Kd 1.00 1.00 1.00
 Ka 1.00 1.00 1.00
 Tf 1.00 1.00 1.00
 Ni 1.00
-map_Kd appleKuki.png
+map_Kd appleTexture.png
 
 newmtl aiStandardSurface3SG
 illum 4
@@ -23,7 +23,7 @@ Kd 1.00 1.00 1.00
 Ka 1.00 1.00 1.00
 Tf 1.00 1.00 1.00
 Ni 1.00
-map_Kd appleKuki.png
+map_Kd appleTexture.png
 
 newmtl initialShadingGroup
 illum 4
@@ -31,4 +31,4 @@ Kd 1.00 1.00 1.00
 Ka 1.00 1.00 1.00
 Tf 1.00 1.00 1.00
 Ni 1.00
-map_Kd appleKuki.png
+map_Kd appleTexture.png
