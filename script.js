@@ -1,4 +1,4 @@
-const wordsList = [["りんご", "バナナ"], ["猫", "犬"], ["海", "山"]];
+const wordsList = [["りんご", "いちご"], ["猫", "犬"], ["海", "山"]];
 let currentGameId = null;
 let myIndex = null;
 let myName = "";
