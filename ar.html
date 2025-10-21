@@ -2,9 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>WordWolf AR Model Test (OBJ + MTL)</title>
+  <title>WordWolf AR Model (りんご・いちご対応)</title>
 
-  <!-- A-Frame と MindAR -->
+  <!-- A-Frame & MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
@@ -43,36 +43,63 @@
     device-orientation-permission-ui="enabled: true"
     loading-screen="enabled: false"
   >
-    <a-assets>
-      <!-- OBJとMTLの読み込み -->
-      <a-asset-item id="appleObj" src="https://yunogame.github.io/wordwolf-webar/appleModel.obj"></a-asset-item>
-      <a-asset-item id="appleMtl" src="https://yunogame.github.io/wordwolf-webar/appleModel.mtl"></a-asset-item>
-    </a-assets>
+    <a-assets id="modelAssets"></a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0">
-      <!-- 🍎 OBJ + MTLモデル -->
+    <a-entity mindar-image-target="targetIndex: 0" id="targetEntity"></a-entity>
+  </a-scene>
+
+  <script>
+    // ✅ URL からお題を取得 (?word=りんご or ?word=いちご)
+    const params = new URLSearchParams(location.search);
+    const word = params.get("word") || "りんご";
+
+    // ✅ 表示するモデルをマッピング
+    const models = {
+      "りんご": {
+        obj: "https://yunogame.github.io/wordwolf-webar/appleModel.obj",
+        mtl: "https://yunogame.github.io/wordwolf-webar/appleModel.mtl",
+        scale: "0.5 0.5 0.5",
+        pos: "0 -2.3 0"
+      },
+      "いちご": {
+        obj: "https://yunogame.github.io/wordwolf-webar/strawberry.obj",
+        mtl: "https://yunogame.github.io/wordwolf-webar/strawberry.mtl",
+        scale: "0.5 0.5 0.5",
+        pos: "0 -2.3 0"
+      }
+    };
+
+    // ✅ お題に対応するモデルを取得（存在しない場合はりんごを使用）
+    const chosen = models[word] || models["りんご"];
+
+    // ✅ A-Frame の <a-assets> にモデルを登録
+    const assets = document.getElementById("modelAssets");
+    assets.innerHTML = `
+      <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
+      <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
+    `;
+
+    // ✅ MindARターゲット内にモデル＋テキストを配置
+    const targetEntity = document.getElementById("targetEntity");
+    targetEntity.innerHTML = `
       <a-entity
-        obj-model="obj: #appleObj; mtl: #appleMtl"
-        scale="0.5 0.5 0.5"
-        position="0 -2.3 0"
+        obj-model="obj: #obj; mtl: #mtl"
+        scale="${chosen.scale}"
+        position="${chosen.pos}"
         rotation="0 0 0"
       ></a-entity>
-
-      <!-- テキスト -->
       <a-text
-        value="Apple Model Loaded!"
+        value="${word}"
         position="0 1.2 0"
-        rotation="0 0 0"
         align="center"
         color="#000"
         width="2"
       ></a-text>
-    </a-entity>
-  </a-scene>
+    `;
 
-  <script>
+    // ✅ カメラ起動後にローディングテキストを非表示
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
@@ -82,5 +109,3 @@
   </script>
 </body>
 </html>
-
-
