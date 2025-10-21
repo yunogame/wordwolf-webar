@@ -1,9 +1,11 @@
-const wordsList = [["りんご", "いちご"], ["猫", "犬"], ["海", "山"]];
+// --- お題（りんご＆いちごのみ） ---
+const wordsList = [["りんご", "いちご"]];
 let currentGameId = null;
 let myIndex = null;
 let myName = "";
 let playerCount = 0;
 
+// --- 名前入力処理 ---
 document.getElementById("enterName").addEventListener("click", () => {
   const name = document.getElementById("playerNameInput").value.trim();
   if (!name) return alert("名前を入力してください");
@@ -16,6 +18,7 @@ document.getElementById("enterName").addEventListener("click", () => {
   if (gameId) joinGame(gameId);
 });
 
+// --- ゲーム作成処理 ---
 document.getElementById("createGame").addEventListener("click", async () => {
   playerCount = parseInt(document.getElementById("playerCount").value);
   if (playerCount < 2) return alert("2人以上のプレイヤー数を入力してください");
@@ -56,6 +59,7 @@ document.getElementById("createGame").addEventListener("click", async () => {
   });
 });
 
+// --- ゲーム参加処理 ---
 function joinGame(gameId) {
   currentGameId = gameId;
   const gameRef = firebase.database().ref(`games/${gameId}`);
@@ -102,6 +106,7 @@ function joinGame(gameId) {
   });
 }
 
+// --- お題を見るボタン ---
 document.getElementById("showWord").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -117,7 +122,7 @@ document.getElementById("showWord").addEventListener("click", () => {
   });
 });
 
-// ✅ ARで見るボタン：GitHub Pages のフルパスに修正済み
+// --- ARで見るボタン ---
 document.getElementById("showAR").addEventListener("click", () => {
   if (!currentGameId || myIndex === null) return;
 
@@ -125,12 +130,13 @@ document.getElementById("showAR").addEventListener("click", () => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
 
-    // GitHub Pages 上のフルパス
+    // GitHub Pages上のar.htmlを開く
     const arUrl = `https://yunogame.github.io/wordwolf-webar/ar.html?word=${encodeURIComponent(word)}`;
     window.open(arUrl, "_blank");
   });
 });
 
+// --- 議論タイマー処理 ---
 function startDiscussion(gameId) {
   const showBtn = document.getElementById("showWord");
   showBtn.disabled = true;
@@ -168,73 +174,5 @@ function startDiscussion(gameId) {
   });
 }
 
-document.getElementById("startVote").addEventListener("click", () => {
-  document.getElementById("voteSection").style.display = "block";
-
-  const voteOptions = document.getElementById("voteOptions");
-  voteOptions.innerHTML = "";
-
-  firebase.database().ref(`games/${currentGameId}/players`).once("value").then(snapshot => {
-    const names = snapshot.val() || [];
-    names.forEach((name, index) => {
-      const btn = document.createElement("button");
-      btn.textContent = name;
-      btn.onclick = () => {
-        firebase.database().ref(`games/${currentGameId}/votes/${myIndex}`).set(index);
-        document.getElementById("voteSection").innerHTML = "投票が完了しました。結果を待っています...";
-      };
-      voteOptions.appendChild(btn);
-    });
-  });
-});
-
-firebase.database().ref().child("games").on("child_changed", (snapshot) => {
-  const data = snapshot.val();
-  if (snapshot.key !== currentGameId) return;
-
-  const votes = data.votes || {};
-  if (Object.keys(votes).length < data.playerCount) return;
-  if (data.status === "done") return;
-
-  const voteCount = {};
-  Object.values(votes).forEach(index => {
-    voteCount[index] = (voteCount[index] || 0) + 1;
-  });
-
-  const maxVotes = Math.max(...Object.values(voteCount));
-  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
-  const isLiarFound = topVoted.includes(String(data.liarIndex));
-
-  const players = data.players || [];
-  const resultText = isLiarFound
-    ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
-    : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
-
-  alert(resultText);
-
-  firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
-
-  let resultStr = "";
-  Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
-    resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
-  });
-  document.getElementById("voteResult").textContent = resultStr;
-
-  document.getElementById("resetGame").style.display = "inline-block";
-});
-
-document.getElementById("resetGame").addEventListener("click", () => {
-  firebase.database().ref(`games/${currentGameId}`).update({
-    votes: {},
-    status: "waiting",
-    discussionStarted: false,
-    discussionStartTime: null
-  });
-  document.getElementById("voteSection").style.display = "none";
-  document.getElementById("voteResult").textContent = "";
-  document.getElementById("resetGame").style.display = "none";
-  document.getElementById("discussionTimer").textContent = "";
-  document.getElementById("wordDisplay").textContent = "";
-  document.getElementById("timerBar").style.width = "100%";
-  document.getElementById("timerContainer").style.display = "none";
-});
+// --- 投票開始 ---
+document.getElementById("startVote").ad
