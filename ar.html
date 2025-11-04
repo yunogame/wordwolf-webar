@@ -49,72 +49,65 @@
   </a-scene>
 
   <script>
-    // ✅ URLパラメータからお題を取得 (?word=りんご など)
     const params = new URLSearchParams(location.search);
     const word = params.get("word") || "りんご";
 
-    // ✅ モデル設定（OBJ+MTL）
     const models = {
       "りんご": {
         obj: "https://yunogame.github.io/wordwolf-webar/appleModel.obj",
         mtl: "https://yunogame.github.io/wordwolf-webar/appleModel.mtl",
         scale: "0.5 0.5 0.5",
-        pos: "0 -2.3 0",
-        rotation: "0 0 0"
+        pos: "0 -2.3 0"
       },
       "いちご": {
         obj: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.obj",
         mtl: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.mtl",
         scale: "0.25 0.25 0.25",
-        pos: "0 -1.5 0",
-        rotation: "0 0 0"
+        pos: "0 -1.5 0"
       }
     };
 
-    // ✅ A-Frame要素取得
     const assets = document.getElementById("modelAssets");
     const targetEntity = document.getElementById("targetEntity");
 
-    // ✅ お題がモデル対応ならOBJ＋MTLを読み込み
-    if (models[word]) {
-      const chosen = models[word];
-      assets.innerHTML = `
-        <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
-        <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
-      `;
-
-      targetEntity.innerHTML = `
-        <a-entity obj-model="obj: #obj; mtl: #mtl"
-                  scale="${chosen.scale}"
-                  position="${chosen.pos}"
-                  rotation="${chosen.rotation}"></a-entity>
-        <a-text value="${word}" position="0 1.5 0" align="center" color="#000" width="2"></a-text>
-      `;
-    } 
-    // ✅ それ以外（テキストのみのお題）
-    else {
-      let emoji = "❓";
-      if (word === "ケーキ") emoji = "🍰";
-      if (word === "ドーナツ") emoji = "🍩";
-      if (word === "サッカーボール") emoji = "⚽";
-      if (word === "テニスボール") emoji = "🎾";
-
-      targetEntity.innerHTML = `
-        <a-text 
-          value="${emoji} ${word}" 
-          position="0 0 0" 
-          align="center" 
-          color="#000" 
-          width="3">
-        </a-text>
-      `;
-    }
-
-    // ✅ カメラ起動後にローディングテキストを非表示
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
         document.getElementById("loadingText").style.display = "none";
+
+        if (models[word]) {
+          // ✅ モデルを表示
+          const chosen = models[word];
+          assets.innerHTML = `
+            <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
+            <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
+          `;
+          targetEntity.innerHTML = `
+            <a-entity obj-model="obj: #obj; mtl: #mtl"
+                      scale="${chosen.scale}"
+                      position="${chosen.pos}"
+                      rotation="0 0 0"></a-entity>
+            <a-text value="${word}" position="0 1.5 0" align="center" color="#000" width="2"></a-text>
+          `;
+        } else {
+          // ✅ テキストのみのお題
+          let emoji = "❓";
+          if (word === "ケーキ") emoji = "🍰";
+          if (word === "ドーナツ") emoji = "🍩";
+          if (word === "サッカーボール") emoji = "⚽";
+          if (word === "テニスボール") emoji = "🎾";
+
+          targetEntity.innerHTML = `
+            <a-text 
+              value="${emoji} ${word}"
+              position="0 0.5 0"
+              align="center"
+              color="#ffffff"
+              width="3"
+              shadow="receive: true">
+            </a-text>
+          `;
+        }
       });
     });
   </script>
