@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>WordWolf AR Model (りんご・いちご＋テキストお題対応)</title>
+  <title>WordWolf AR Model (全お題対応)</title>
 
   <!-- A-Frame & MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -44,70 +44,98 @@
     loading-screen="enabled: false"
   >
     <a-assets id="modelAssets"></a-assets>
+
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- マーカー検出ターゲット -->
     <a-entity mindar-image-target="targetIndex: 0" id="targetEntity"></a-entity>
   </a-scene>
 
   <script>
+    // ✅ URLパラメータからお題取得 (?word=りんご, いちご, サッカーボール, etc)
     const params = new URLSearchParams(location.search);
     const word = params.get("word") || "りんご";
 
+    // ✅ モデル・テキスト設定マップ
     const models = {
       "りんご": {
+        type: "model",
         obj: "https://yunogame.github.io/wordwolf-webar/appleModel.obj",
         mtl: "https://yunogame.github.io/wordwolf-webar/appleModel.mtl",
         scale: "0.5 0.5 0.5",
-        pos: "0 -2.3 0"
+        pos: "0 -2.3 0",
       },
       "いちご": {
+        type: "model",
         obj: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.obj",
         mtl: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.mtl",
-        scale: "0.25 0.25 0.25",
-        pos: "0 -1.5 0"
-      }
+        scale: "0.2 0.2 0.2",
+        pos: "0 -0.5 0",
+      },
+      "サッカーボール": {
+        type: "text",
+        pos: "0 0 0",
+      },
+      "テニスボール": {
+        type: "text",
+        pos: "0 0 0",
+      },
+      "ケーキ": {
+        type: "text",
+        pos: "0 0 0",
+      },
+      "ドーナツ": {
+        type: "text",
+        pos: "0 0 0",
+      },
     };
 
+    const chosen = models[word] || models["りんご"];
     const assets = document.getElementById("modelAssets");
     const targetEntity = document.getElementById("targetEntity");
 
+    // ✅ モデルタイプなら読み込み
+    if (chosen.type === "model") {
+      assets.innerHTML = `
+        <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
+        <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
+      `;
+    }
+
+    // ✅ マーカー認識時に表示
+    targetEntity.addEventListener("targetFound", () => {
+      let content = "";
+
+      if (chosen.type === "model") {
+        content += `
+          <a-entity
+            obj-model="obj: #obj; mtl: #mtl"
+            scale="${chosen.scale}"
+            position="${chosen.pos}"
+            rotation="0 0 0"
+          ></a-entity>
+        `;
+      }
+
+      // 📝 テキスト（どのタイプでも共通で上に出す）
+      content += `
+        <a-text
+          value="${word}"
+          position="0 1.2 0"
+          align="center"
+          color="#000"
+          width="2"
+        ></a-text>
+      `;
+
+      targetEntity.innerHTML = content;
+    });
+
+    // ✅ カメラ起動後にローディング非表示
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
         document.getElementById("loadingText").style.display = "none";
-
-        if (models[word]) {
-          // ✅ モデルを表示
-          const chosen = models[word];
-          assets.innerHTML = `
-            <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
-            <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
-          `;
-          targetEntity.innerHTML = `
-            <a-entity obj-model="obj: #obj; mtl: #mtl"
-                      scale="${chosen.scale}"
-                      position="${chosen.pos}"
-                      rotation="0 0 0"></a-entity>
-            <a-text value="${word}" position="0 1.5 0" align="center" color="#000" width="2"></a-text>
-          `;
-        } else {
-          // ✅ テキストのみのお題
-          let emoji = "❓";
-          if (word === "ケーキ") emoji = "🍰";
-          if (word === "ドーナツ") emoji = "🍩";
-          if (word === "サッカーボール") emoji = "⚽";
-          if (word === "テニスボール") emoji = "🎾";
-
-          targetEntity.innerHTML = `
-            <a-text 
-              value="${emoji} ${word}"
-              position="0 0.5 0"
-              align="center"
-              color="#ffffff"
-              width="3"
-              shadow="receive: true">
-            </a-text>
-          `;
-        }
       });
     });
   </script>
