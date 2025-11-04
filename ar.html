@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>WordWolf AR Model (りんご・いちご対応)</title>
+  <title>WordWolf AR Display (Unified Model Format)</title>
 
   <!-- A-Frame & MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -11,19 +11,15 @@
 
   <style>
     body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      height: 100%;
-      width: 100%;
+      margin: 0; padding: 0; overflow: hidden;
+      height: 100%; width: 100%;
     }
     #loadingText {
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       font-size: 1.5em;
-      background: rgba(255, 255, 255, 0.8);
+      background: rgba(255,255,255,0.8);
       padding: 10px 20px;
       border-radius: 8px;
       z-index: 10;
@@ -43,77 +39,99 @@
     device-orientation-permission-ui="enabled: true"
     loading-screen="enabled: false"
   >
-    <a-assets id="modelAssets"></a-assets>
+    <a-assets>
+      <!-- 🍎 Apple -->
+      <a-asset-item id="appleObj" src="https://yunogame.github.io/wordwolf-webar/appleModel.obj"></a-asset-item>
+      <a-asset-item id="appleMtl" src="https://yunogame.github.io/wordwolf-webar/appleModel.mtl"></a-asset-item>
+
+      <!-- 🍓 Strawberry -->
+      <a-asset-item id="strawberryObj" src="https://yunogame.github.io/wordwolf-webar/strawberryModel.obj"></a-asset-item>
+      <a-asset-item id="strawberryMtl" src="https://yunogame.github.io/wordwolf-webar/strawberryModel.mtl"></a-asset-item>
+
+      <!-- ⚽ Soccer Ball -->
+      <a-asset-item id="soccerObj" src="https://yunogame.github.io/wordwolf-webar/soccerModel.obj"></a-asset-item>
+      <a-asset-item id="soccerMtl" src="https://yunogame.github.io/wordwolf-webar/soccerModel.mtl"></a-asset-item>
+
+      <!-- 🎾 Tennis Ball -->
+      <a-asset-item id="tennisObj" src="https://yunogame.github.io/wordwolf-webar/tennisModel.obj"></a-asset-item>
+      <a-asset-item id="tennisMtl" src="https://yunogame.github.io/wordwolf-webar/tennisModel.mtl"></a-asset-item>
+
+      <!-- 🍰 Cake -->
+      <a-asset-item id="cakeObj" src="https://yunogame.github.io/wordwolf-webar/cakeModel.obj"></a-asset-item>
+      <a-asset-item id="cakeMtl" src="https://yunogame.github.io/wordwolf-webar/cakeModel.mtl"></a-asset-item>
+
+      <!-- 🍩 Donut -->
+      <a-asset-item id="donutObj" src="https://yunogame.github.io/wordwolf-webar/donutModel.obj"></a-asset-item>
+      <a-asset-item id="donutMtl" src="https://yunogame.github.io/wordwolf-webar/donutModel.mtl"></a-asset-item>
+    </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" id="targetEntity"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 0" id="arContent">
+      <!-- JSで動的にモデルを追加 -->
+    </a-entity>
   </a-scene>
 
   <script>
-    // ✅ URL からお題を取得 (?word=りんご or ?word=いちご)
-    const params = new URLSearchParams(location.search);
-    const word = params.get("word") || "りんご";
-
-    // ✅ 表示するモデルをマッピング
-    const models = {
-      "りんご": {
-        obj: "https://yunogame.github.io/wordwolf-webar/appleModel.obj",
-        mtl: "https://yunogame.github.io/wordwolf-webar/appleModel.mtl",
-        scale: "0.5 0.5 0.5",
-        pos: "0 -2.3 0"
-      },
-      "いちご": {
-        obj: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.obj",
-        mtl: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.mtl",
-        scale: "0.2 0.2 0.2",
-        pos: "0 -0.5 0"
-      }
-    };
-
-    // ✅ お題に対応するモデルを取得（存在しない場合はりんごを使用）
-    const chosen = models[word] || models["りんご"];
-
-    // ✅ A-Frame の <a-assets> にモデルを登録
-    const assets = document.getElementById("modelAssets");
-    assets.innerHTML = `
-      <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
-      <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
-    `;
-
-    // ✅ MindARターゲット内にモデル＋テキストを配置
-    const targetEntity = document.getElementById("targetEntity");
-    targetEntity.innerHTML = `
-      <a-entity
-        obj-model="obj: #obj; mtl: #mtl"
-        scale="${chosen.scale}"
-        position="${chosen.pos}"
-        rotation="0 0 0"
-      ></a-entity>
-      <a-text
-        value="${word}"
-        position="0 1.2 0"
-        align="center"
-        color="#000"
-        width="2"
-      ></a-text>
-    `;
-
-    // ✅ カメラ起動後にローディングテキストを非表示
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
         document.getElementById("loadingText").style.display = "none";
       });
+
+      const params = new URLSearchParams(window.location.search);
+      const word = params.get("word") || "";
+      const arContent = document.getElementById("arContent");
+
+      // 共通関数：モデル or テキスト表示
+      function showModelOrText(objId, mtlId, scale = "0.5 0.5 0.5", pos = "0 -2.3 0") {
+        if (objId && mtlId) {
+          const model = document.createElement("a-entity");
+          model.setAttribute("obj-model", `obj: ${objId}; mtl: ${mtlId}`);
+          model.setAttribute("scale", scale);
+          model.setAttribute("position", pos);
+          arContent.appendChild(model);
+        } else {
+          const text = document.createElement("a-text");
+          text.setAttribute("value", word);
+          text.setAttribute("align", "center");
+          text.setAttribute("color", "#000");
+          text.setAttribute("width", "3");
+          text.setAttribute("position", "0 0 0");
+          arContent.appendChild(text);
+        }
+      }
+
+      // お題ごとの表示
+      switch (word) {
+        case "りんご":
+          showModelOrText("#appleObj", "#appleMtl", "0.5 0.5 0.5", "0 -2.3 0");
+          break;
+        case "いちご":
+          showModelOrText("#strawberryObj", "#strawberryMtl", "0.3 0.3 0.3", "0 -2.0 0");
+          break;
+        case "サッカーボール":
+          showModelOrText("#soccerObj", "#soccerMtl", "0.5 0.5 0.5", "0 -2.0 0");
+          break;
+        case "テニスボール":
+          showModelOrText("#tennisObj", "#tennisMtl", "0.5 0.5 0.5", "0 -2.0 0");
+          break;
+        case "ケーキ":
+          showModelOrText("#cakeObj", "#cakeMtl", "0.5 0.5 0.5", "0 -2.0 0");
+          break;
+        case "ドーナツ":
+          showModelOrText("#donutObj", "#donutMtl", "0.5 0.5 0.5", "0 -2.0 0");
+          break;
+        default:
+          const txt = document.createElement("a-text");
+          txt.setAttribute("value", `お題: ${word}`);
+          txt.setAttribute("align", "center");
+          txt.setAttribute("color", "#000");
+          txt.setAttribute("width", "3");
+          txt.setAttribute("position", "0 0 0");
+          arContent.appendChild(txt);
+      }
     });
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
