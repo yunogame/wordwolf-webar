@@ -1,5 +1,10 @@
-// --- お題（りんご＆いちごのみ） ---
-const wordsList = [["りんご", "いちご"]];
+// --- お題（りんご＆いちご／サッカーボール＆テニスボール／ケーキ＆ドーナツ） ---
+const wordsList = [
+  ["りんご", "いちご"],
+  ["サッカーボール", "テニスボール"],
+  ["ケーキ", "ドーナツ"]
+];
+
 let currentGameId = null;
 let myIndex = null;
 let myName = "";
@@ -26,6 +31,7 @@ document.getElementById("createGame").addEventListener("click", async () => {
   const newGameRef = firebase.database().ref("games").push();
   currentGameId = newGameRef.key;
 
+  // 🔹お題をランダムに選ぶ
   const wordSet = wordsList[Math.floor(Math.random() * wordsList.length)];
   const liarIndex = Math.floor(Math.random() * playerCount);
 
@@ -130,7 +136,7 @@ document.getElementById("showAR").addEventListener("click", () => {
     const data = snapshot.val();
     const word = myIndex === data.liarIndex ? data.wordSet[1] : data.wordSet[0];
 
-    // GitHub Pages上のar.htmlを開く
+    // 🔹GitHub Pages 上の ar.html にワードを渡して開く
     const arUrl = `https://yunogame.github.io/wordwolf-webar/ar.html?word=${encodeURIComponent(word)}`;
     window.open(arUrl, "_blank");
   });
@@ -175,4 +181,75 @@ function startDiscussion(gameId) {
 }
 
 // --- 投票開始 ---
-document.getElementById("startVote").ad
+document.getElementById("startVote").addEventListener("click", () => {
+  document.getElementById("voteSection").style.display = "block";
+
+  const voteOptions = document.getElementById("voteOptions");
+  voteOptions.innerHTML = "";
+
+  firebase.database().ref(`games/${currentGameId}/players`).once("value").then(snapshot => {
+    const names = snapshot.val() || [];
+    names.forEach((name, index) => {
+      const btn = document.createElement("button");
+      btn.textContent = name;
+      btn.onclick = () => {
+        firebase.database().ref(`games/${currentGameId}/votes/${myIndex}`).set(index);
+        document.getElementById("voteSection").innerHTML = "投票が完了しました。結果を待っています...";
+      };
+      voteOptions.appendChild(btn);
+    });
+  });
+});
+
+// --- 結果判定処理 ---
+firebase.database().ref().child("games").on("child_changed", (snapshot) => {
+  const data = snapshot.val();
+  if (snapshot.key !== currentGameId) return;
+
+  const votes = data.votes || {};
+  if (Object.keys(votes).length < data.playerCount) return;
+  if (data.status === "done") return;
+
+  const voteCount = {};
+  Object.values(votes).forEach(index => {
+    voteCount[index] = (voteCount[index] || 0) + 1;
+  });
+
+  const maxVotes = Math.max(...Object.values(voteCount));
+  const topVoted = Object.keys(voteCount).filter(k => voteCount[k] === maxVotes);
+  const isLiarFound = topVoted.includes(String(data.liarIndex));
+
+  const players = data.players || [];
+  const resultText = isLiarFound
+    ? `勝利！ウルフ「${players[data.liarIndex]}」を見つけました！`
+    : `敗北… ウルフは「${players[data.liarIndex]}」でした。`;
+
+  alert(resultText);
+
+  firebase.database().ref(`games/${currentGameId}`).update({ status: "done" });
+
+  let resultStr = "";
+  Object.entries(votes).forEach(([voterIdx, votedIdx]) => {
+    resultStr += `${players[voterIdx]} → ${players[votedIdx]}\n`;
+  });
+  document.getElementById("voteResult").textContent = resultStr;
+
+  document.getElementById("resetGame").style.display = "inline-block";
+});
+
+// --- リセット処理 ---
+document.getElementById("resetGame").addEventListener("click", () => {
+  firebase.database().ref(`games/${currentGameId}`).update({
+    votes: {},
+    status: "waiting",
+    discussionStarted: false,
+    discussionStartTime: null
+  });
+  document.getElementById("voteSection").style.display = "none";
+  document.getElementById("voteResult").textContent = "";
+  document.getElementById("resetGame").style.display = "none";
+  document.getElementById("discussionTimer").textContent = "";
+  document.getElementById("wordDisplay").textContent = "";
+  document.getElementById("timerBar").style.width = "100%";
+  document.getElementById("timerContainer").style.display = "none";
+});
