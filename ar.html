@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>WordWolf AR (りんご・いちご・ボール・スイーツ対応)</title>
+  <title>WordWolf AR Model</title>
 
   <!-- A-Frame & MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -44,71 +44,87 @@
     loading-screen="enabled: false"
   >
     <a-assets id="modelAssets"></a-assets>
+
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
     <a-entity mindar-image-target="targetIndex: 0" id="targetEntity"></a-entity>
   </a-scene>
 
   <script>
+    // URLパラメータからお題を取得 (?word=りんご 等)
     const params = new URLSearchParams(location.search);
     const word = params.get("word") || "りんご";
 
+    // 各お題に対応するモデル設定
     const models = {
       "りんご": {
-        type: "model",
         obj: "https://yunogame.github.io/wordwolf-webar/appleModel.obj",
         mtl: "https://yunogame.github.io/wordwolf-webar/appleModel.mtl",
         scale: "0.5 0.5 0.5",
         pos: "0 -2.3 0"
       },
       "いちご": {
-        type: "model",
         obj: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.obj",
         mtl: "https://yunogame.github.io/wordwolf-webar/Strawberry_obj.mtl",
         scale: "0.2 0.2 0.2",
         pos: "0 -0.5 0"
       },
-      "サッカーボール": { type: "text", text: "⚽ サッカーボール" },
-      "テニスボール": { type: "text", text: "🎾 テニスボール" },
-      "ケーキ": { type: "text", text: "🍰 ケーキ" },
-      "ドーナツ": { type: "text", text: "🍩 ドーナツ" }
+      "ケーキ": {
+        obj: "https://yunogame.github.io/wordwolf-webar/Cake.obj",
+        mtl: "",
+        scale: "0.3 0.3 0.3",
+        pos: "0 -0.5 0"
+      },
+      "ドーナツ": {
+        obj: "https://yunogame.github.io/wordwolf-webar/Donut.obj",
+        mtl: "",
+        scale: "0.3 0.3 0.3",
+        pos: "0 -0.5 0"
+      },
+      "サッカーボール": {
+        obj: "https://yunogame.github.io/wordwolf-webar/Soccer.obj",
+        mtl: "",
+        scale: "0.25 0.25 0.25",
+        pos: "0 -0.5 0"
+      },
+      "テニスボール": {
+        obj: "https://yunogame.github.io/wordwolf-webar/Tennis.obj",
+        mtl: "",
+        scale: "0.25 0.25 0.25",
+        pos: "0 -0.5 0"
+      }
     };
 
+    // 該当モデルを取得（存在しない場合はりんごを使用）
     const chosen = models[word] || models["りんご"];
+
+    // <a-assets> にモデルを登録
+    const assets = document.getElementById("modelAssets");
+    assets.innerHTML = `
+      <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
+      ${chosen.mtl ? `<a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>` : ""}
+    `;
+
+    // ターゲット内にモデルとテキストを配置
     const targetEntity = document.getElementById("targetEntity");
+    targetEntity.innerHTML = `
+      <a-entity
+        obj-model="obj: #obj${chosen.mtl ? `; mtl: #mtl` : ""}"
+        scale="${chosen.scale}"
+        position="${chosen.pos}"
+        rotation="0 0 0"
+      ></a-entity>
+      <a-text
+        value="${word}"
+        position="0 1 0"
+        align="center"
+        color="#000000"
+        width="2"
+        side="double"
+      ></a-text>
+    `;
 
-    if (chosen.type === "model") {
-      const assets = document.getElementById("modelAssets");
-      assets.innerHTML = `
-        <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
-        <a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>
-      `;
-
-      targetEntity.innerHTML = `
-        <a-entity
-          obj-model="obj: #obj; mtl: #mtl"
-          scale="${chosen.scale}"
-          position="${chosen.pos}"
-        ></a-entity>
-        <a-entity position="0 1.2 0">
-          <a-text value="${word}" align="center" color="#000" width="2"></a-text>
-        </a-entity>
-      `;
-    } else if (chosen.type === "text") {
-      // ✅ テキストは a-entity の中に明示的に包む
-      targetEntity.innerHTML = `
-        <a-entity position="0 0 0" rotation="0 0 0">
-          <a-plane color="#fff" width="2.5" height="1.0" opacity="0.7"></a-plane>
-          <a-text 
-            value="${chosen.text}" 
-            align="center" 
-            color="#000" 
-            width="3"
-            position="0 0 0.01"
-          ></a-text>
-        </a-entity>
-      `;
-    }
-
+    // ローディングテキストを非表示に
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
