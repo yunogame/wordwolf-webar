@@ -49,11 +49,9 @@
   </a-scene>
 
   <script>
-    // ✅ URLパラメータからお題を取得 (?word=りんご 等)
     const params = new URLSearchParams(location.search);
     const word = params.get("word") || "りんご";
 
-    // ✅ モデル or テキストデータを定義
     const models = {
       "りんご": {
         type: "model",
@@ -69,28 +67,15 @@
         scale: "0.2 0.2 0.2",
         pos: "0 -0.5 0"
       },
-      "サッカーボール": {
-        type: "text",
-        text: "⚽ サッカーボール"
-      },
-      "テニスボール": {
-        type: "text",
-        text: "🎾 テニスボール"
-      },
-      "ケーキ": {
-        type: "text",
-        text: "🍰 ケーキ"
-      },
-      "ドーナツ": {
-        type: "text",
-        text: "🍩 ドーナツ"
-      }
+      "サッカーボール": { type: "text", text: "⚽ サッカーボール" },
+      "テニスボール": { type: "text", text: "🎾 テニスボール" },
+      "ケーキ": { type: "text", text: "🍰 ケーキ" },
+      "ドーナツ": { type: "text", text: "🍩 ドーナツ" }
     };
 
     const chosen = models[word] || models["りんご"];
     const targetEntity = document.getElementById("targetEntity");
 
-    // ✅ モデルタイプならOBJ/MTLを読み込む
     if (chosen.type === "model") {
       const assets = document.getElementById("modelAssets");
       assets.innerHTML = `
@@ -103,31 +88,27 @@
           obj-model="obj: #obj; mtl: #mtl"
           scale="${chosen.scale}"
           position="${chosen.pos}"
-          rotation="0 0 0"
         ></a-entity>
-        <a-text
-          value="${word}"
-          position="0 1.2 0"
-          align="center"
-          color="#000"
-          width="2"
-        ></a-text>
+        <a-entity position="0 1.2 0">
+          <a-text value="${word}" align="center" color="#000" width="2"></a-text>
+        </a-entity>
       `;
-    } 
-    // ✅ テキストタイプなら文字をそのまま表示
-    else if (chosen.type === "text") {
+    } else if (chosen.type === "text") {
+      // ✅ テキストは a-entity の中に明示的に包む
       targetEntity.innerHTML = `
-        <a-text
-          value="${chosen.text}"
-          position="0 0 0"
-          align="center"
-          color="#000"
-          width="3"
-        ></a-text>
+        <a-entity position="0 0 0" rotation="0 0 0">
+          <a-plane color="#fff" width="2.5" height="1.0" opacity="0.7"></a-plane>
+          <a-text 
+            value="${chosen.text}" 
+            align="center" 
+            color="#000" 
+            width="3"
+            position="0 0 0.01"
+          ></a-text>
+        </a-entity>
       `;
     }
 
-    // ✅ ローディングを非表示
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
