@@ -9,10 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
 
-  <!-- Three.js loaders -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/OBJLoader.js"></script>
-
   <style>
     body, html {
       margin: 0;
@@ -55,10 +51,11 @@
   </a-scene>
 
   <script>
+    // URLパラメータからお題を取得 (?word=りんご 等)
     const params = new URLSearchParams(location.search);
     const word = params.get("word") || "りんご";
 
-    // モデル設定一覧
+    // 各お題に対応するモデル設定
     const models = {
       "りんご": {
         obj: "https://yunogame.github.io/wordwolf-webar/appleModel.obj",
@@ -101,85 +98,36 @@
       }
     };
 
+    // 該当モデルを取得（存在しない場合はりんごを使用）
     const chosen = models[word] || models["りんご"];
+
+    // <a-assets> にモデルを登録
     const assets = document.getElementById("modelAssets");
+    assets.innerHTML = `
+      <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
+      ${chosen.mtl ? `<a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>` : ""}
+    `;
+
+    // ターゲット内にモデルとテキストを配置
     const targetEntity = document.getElementById("targetEntity");
+    targetEntity.innerHTML = `
+      <a-entity
+        obj-model="obj: #obj${chosen.mtl ? `; mtl: #mtl` : ""}"
+        scale="${chosen.scale}"
+        position="${chosen.pos}"
+        rotation="0 0 0"
+      ></a-entity>
+      <a-text
+        value="${word}"
+        position="0 1 0"
+        align="center"
+        color="#000000"
+        width="2"
+        side="double"
+      ></a-text>
+    `;
 
-    // 🍰 ケーキの場合のみ、Three.jsでマテリアルを直接適用
-    if (word === "ケーキ") {
-      // A-Frameコンポーネントを登録
-      AFRAME.registerComponent("cake-loader", {
-        init: function () {
-          const sceneEl = this.el.sceneEl.object3D;
-          const loader = new THREE.OBJLoader();
-          const textureLoader = new THREE.TextureLoader();
-
-          const baseColor = textureLoader.load(chosen.textureBase);
-          const normalMap = textureLoader.load(chosen.textureNormal);
-          const roughnessMap = textureLoader.load(chosen.textureRough);
-          const aoMap = textureLoader.load(chosen.textureAO);
-
-          loader.load(chosen.obj, (obj) => {
-            const material = new THREE.MeshStandardMaterial({
-              map: baseColor,
-              normalMap: normalMap,
-              roughnessMap: roughnessMap,
-              aoMap: aoMap,
-              metalness: 0,
-              roughness: 1.0,
-            });
-
-            obj.traverse((child) => {
-              if (child.isMesh) {
-                child.material = material;
-              }
-            });
-
-            obj.scale.set(0.01, 0.01, 0.01);
-            obj.position.set(0, -0.5, 0);
-
-            this.el.object3D.add(obj);
-          });
-        }
-      });
-
-      // ケーキ専用エンティティを設置
-      targetEntity.innerHTML = `
-        <a-entity cake-loader></a-entity>
-        <a-text
-          value="${word}"
-          position="0 1 0"
-          align="center"
-          color="#000000"
-          width="2"
-          side="double"
-        ></a-text>
-      `;
-    } else {
-      // 🍎 通常モデルは従来通り
-      assets.innerHTML = `
-        <a-asset-item id="obj" src="${chosen.obj}"></a-asset-item>
-        ${chosen.mtl ? `<a-asset-item id="mtl" src="${chosen.mtl}"></a-asset-item>` : ""}
-      `;
-
-      targetEntity.innerHTML = `
-        <a-entity
-          obj-model="obj: #obj${chosen.mtl ? `; mtl: #mtl` : ""}"
-          scale="${chosen.scale}"
-          position="${chosen.pos}"
-          rotation="0 0 0"
-        ></a-entity>
-        <a-text
-          value="${word}"
-          position="0 1 0"
-          align="center"
-          color="#000000"
-          width="2"
-          side="double"
-        ></a-text>
-      `;
-    }
-
+    // ローディングテキストを非表示に
     document.addEventListener("DOMContentLoaded", () => {
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("renderstart", () => {
@@ -189,3 +137,12 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
