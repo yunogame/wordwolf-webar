@@ -1,4 +1,4 @@
-# Blender MTL File: 'None'
+# Blender MTL File: 'Cake2.blend'
 # Material Count: 1
 
 newmtl set1
@@ -10,4 +10,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 0.000000
 d 1.000000
 illum 1
-map_Kd cake_basecolor.png
+map_Kd cake_basecolor2.png
